@@ -25,6 +25,9 @@ uint32 bp6;
 uint32 bp7;
 uint32 bp8;
 
+ULONG last_VWaitPos = 0, last_HWaitPos = 0;
+ULONG VWaitPos = 0, HWaitPos = 0;
+
 static uint32 color[256];
 
 uint32 COP1LC, COP2LC;
@@ -205,6 +208,14 @@ void cop_skip(union cop data)
 	// bit 7-1, HP, enable bits?
 }
 
+uint32 wait_beam = 0x0000;
+uint32 wait_beam_enable = 0xFFFF;
+
+void cop_wait(union cop data)
+{
+	wait_beam = data.d16.a & 0xFFFE;
+	wait_beam_enable = data.d16.b & 0xFFFE;
+}
 
 void render_copper()
 {
@@ -212,19 +223,23 @@ void render_copper()
 
 	for (;ptr -> d32 != 0xFFFFFFFE;ptr++)
 	{
-//		printf("%-8d, %04x,%04x -- %08x\n",ptr - (union cop *) copperList, ptr -> d16.a,ptr -> d16.b,beam);
+		printf("%-8d, %04x,%04x -- %08x\n",ptr - (union cop *) copperList, ptr -> d16.a,ptr -> d16.b,beam_clock);
 
 		switch (ptr -> d32 & 0x1001)
 		{
 			case 0x0000:
 			case 0x0001:	cop_move( *ptr );	break;
-			case 0x1000:
-						break;
+			case 0x1000:	cop_wait( *ptr); 	break;
 			case 0x1001:	cop_skip( *ptr);	break;
 		}
 
-		beam_clock++;
+		while ((beam_clock & wait_beam_enable) < wait_beam)
+		{
+			beam_clock++;
+			plot( beam_clock & 0xFF, beam_clock >> 8 );
+		}
 
+		beam_clock++;
 		plot( beam_clock & 0xFF, beam_clock >> 8 );
 	}
 }
