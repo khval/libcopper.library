@@ -1,0 +1,1 @@
+# libcopper.library
