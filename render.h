@@ -10,6 +10,15 @@ typedef unsigned short uint16;
 #define INTREQ 2
 #define COPJMP1 4
 #define COPJMP2 8
+#define COP1LCH 18
+#define COP1LCL 20
+#define COP2LCH 22
+#define COP2LCL 24
+#define BPL1PTH 26
+#define BPL1PTL 28
+#define BPL2PTH 30
+#define BPL2PTL 32
+#define BPLCON0 33
 
 // Display Window
 
@@ -21,8 +30,12 @@ typedef unsigned short uint16;
 #define DDFSTART 14
 #define DDFSTOP 16
 
-#define COLOR0 0x180
-#define COLOR1 0x182
+#define COLOR00 0x180
+#define COLOR01 0x182
+#define COLOR02 0x184
+#define COLOR03 0x186
+#define COLOR04 0x188
+#define COLOR05 0x18A
 
 #define lowres_clock 4
 

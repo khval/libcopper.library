@@ -16,7 +16,16 @@ uint32 copperList[1000];
 uint32 copperl1;
 uint32 copperl2;
 
-uint32 color0;
+uint32 bp1;
+uint32 bp2;
+uint32 bp3;
+uint32 bp4;
+uint32 bp5;
+uint32 bp6;
+uint32 bp7;
+uint32 bp8;
+
+static uint32 color[256];
 
 uint32 COP1LC, COP2LC;
 
@@ -83,8 +92,6 @@ void crb(int y)
 	x -= 5; 	Draw(rp,x,y);
 }
 
-
-
 void init_ecs2colors()
 {
 	uint32 i;
@@ -96,6 +103,9 @@ void init_ecs2colors()
 			| ( (i & 0xF) << 4);
 	}
 }
+
+#define setHigh16(name,value) name = (name & 0xFFFF) | ( (value)<<16);
+#define setLow16(name,value) name = ( name & 0xFFFF0000) | (value);
 
 void cop_move(union cop data)
 {
@@ -115,11 +125,30 @@ void cop_move(union cop data)
 		case DDFSTOP: ddfstop = data.d16.b; 
 					break;
 
-		case COPJMP1: ptr = (union cop *) copperList + COP1LC -1; 	break;
-		case COPJMP2: ptr = (union cop *) copperList + COP2LC -1; 	break;
-
-		case COLOR0:	color0 = ecs2argb[data.d16.b];
+		case COPJMP1: ptr = (union cop *) COP1LC -1;
 					break;
+
+		case COPJMP2: ptr = (union cop *) COP2LC -1;
+					break;
+
+		case COLOR00: color[0] = ecs2argb[data.d16.b];	break;
+		case COLOR01: color[1] = ecs2argb[data.d16.b];	break;
+		case COLOR02: color[2] = ecs2argb[data.d16.b];	break;
+		case COLOR03: color[3] = ecs2argb[data.d16.b];	break;
+		case COLOR04: color[4] = ecs2argb[data.d16.b];	break;
+		case COLOR05: color[5] = ecs2argb[data.d16.b];	break;
+
+		case BPL1PTH: setHigh16(bp1,data.d16.b); break;
+		case BPL1PTL: setLow16(bp1,data.d16.b); break;
+		case BPL2PTH: setHigh16(bp2,data.d16.b); break;
+		case BPL2PTL: setLow16(bp2,data.d16.b); break;
+
+//		case BPLCON0:
+
+		case COP1LCH: setHigh16(COP1LC,data.d16.b); break;
+		case COP1LCL: setLow16(COP1LC,data.d16.b); break;
+		case COP2LCH: setHigh16(COP2LC,data.d16.b); break;
+		case COP2LCL: setLow16(COP2LC,data.d16.b); break;
 	}
 }
 
@@ -133,7 +162,7 @@ void plot( int x,int y)
 	int may = (diwstop >> 8) + 0x100;
 	int mix , max;
 
-	if (ly!=y) printf("%d - %08x\n",y, color0);
+	if (ly!=y) printf("%d - %08x\n",y, color[0]);
 
 	wc = WordCount( ddfstart, ddfstop) * lowres_clock;
 
@@ -148,7 +177,7 @@ void plot( int x,int y)
 		{
 			x *= (16 / lowres_clock) ;
 			y *= 2;
-			WritePixelColor(rp,x,y,color0);
+			WritePixelColor(rp,x,y,color[0]);
 		}
 	}
 

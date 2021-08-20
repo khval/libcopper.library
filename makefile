@@ -17,7 +17,8 @@ dependent_c_files += render.c
 
 dependent_files = ${dependent_c_files:.c=.o}
 
-elf_files = copper.elf
+elf_files += copper.elf
+elf_files += two-bitplanes.elf
 
 all_files +=  ${elf_files} ${dependent_files}
 
