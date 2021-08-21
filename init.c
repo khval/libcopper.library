@@ -24,38 +24,9 @@ struct IntuitionIFace		*IIntuition = NULL;
 struct Library			*GraphicsBase = NULL;
 struct GraphicsIFace		*IGraphics = NULL;
 
-#define lpage 256*8
 
 unsigned char bits2bytes_data[256*8*8];		// 256 values, 8pixels / bits, 8 plaines
 unsigned char *bits2bytes[256*8];			// 256 values. 
-
-unsigned char **bits2bytes0 = bits2bytes + 256*0;
-unsigned char **bits2bytes1 = bits2bytes + 256*1;
-unsigned char **bits2bytes2 = bits2bytes + 256*2;
-unsigned char **bits2bytes3 = bits2bytes + 256*3;
-unsigned char **bits2bytes4 = bits2bytes + 256*4;
-unsigned char **bits2bytes5 = bits2bytes + 256*5;
-unsigned char **bits2bytes6 = bits2bytes + 256*6;
-unsigned char **bits2bytes7 = bits2bytes + 256*7;
-
-void initBits2Bytes()
-{
-	unsigned int p,n,b;
-	unsigned char *page;
-	unsigned char *at;
-
-	for (p=0;p<8;p++)
-	{
-		page = bits2bytes_data + lpage * p;
-
-		for (n=0;n<256;n++) 
-		{
-			at= page + n*8;
-			for (b=0; b<8;b++) at[7-b] = n & 1L<<b ? 1L<<p: 0;		// we reverse the bits.
-			bits2bytes[256*p+n] = at;
-		}
-	}
-}
 
 BOOL open_lib( const char *name, int ver , const char *iname, int iver, struct Library **base, struct Interface **interface)
 {

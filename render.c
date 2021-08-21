@@ -1,5 +1,4 @@
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -110,6 +109,8 @@ void init_ecs2colors()
 #define setHigh16(name,value) name = (name & 0xFFFF) | ( (value)<<16);
 #define setLow16(name,value) name = ( name & 0xFFFF0000) | (value);
 
+uint16 hires,planes,ham,lace;
+
 void cop_move(union cop data)
 {
 	switch ( data.d16.a )
@@ -146,7 +147,12 @@ void cop_move(union cop data)
 		case BPL2PTH: setHigh16(bp2,data.d16.b); break;
 		case BPL2PTL: setLow16(bp2,data.d16.b); break;
 
-//		case BPLCON0:
+		case BPLCON0:
+					hires = data.d16.b & 0x8000;
+					planes = (data.d16.b & 0x7000) >> 12;
+					ham = data.d16.b & (1<<11);
+					lace = data.d16.b & (1<<2);
+					break;
 
 		case COP1LCH: setHigh16(COP1LC,data.d16.b); break;
 		case COP1LCL: setLow16(COP1LC,data.d16.b); break;
@@ -217,9 +223,20 @@ void cop_wait(union cop data)
 	wait_beam_enable = data.d16.b & 0xFFFE;
 }
 
+unsigned char *bp1ptr,*bp2ptr,*bp3ptr,*bp4ptr,*bp5ptr,*bp6ptr,*bp7ptr,*bp8ptr;
+
 void render_copper()
 {
 	ptr = (union cop *) copperList;
+
+	bp1ptr = (unsigned char *) bp1;
+	bp2ptr = (unsigned char *) bp2;
+	bp3ptr = (unsigned char *) bp3;
+	bp4ptr = (unsigned char *) bp4;
+	bp5ptr = (unsigned char *) bp5;
+	bp6ptr = (unsigned char *) bp6;
+	bp7ptr = (unsigned char *) bp7;
+	bp8ptr = (unsigned char *) bp8;
 
 	for (;ptr -> d32 != 0xFFFFFFFE;ptr++)
 	{
@@ -228,9 +245,9 @@ void render_copper()
 		switch (ptr -> d32 & 0x1001)
 		{
 			case 0x0000:
-			case 0x0001:	cop_move( *ptr );	break;
-			case 0x1000:	cop_wait( *ptr); 	break;
-			case 0x1001:	cop_skip( *ptr);	break;
+			case 0x0001:	cop_move( *ptr ); break;
+			case 0x1000:	cop_wait( *ptr); break;
+			case 0x1001:	cop_skip( *ptr); break;
 		}
 
 		while ((beam_clock & wait_beam_enable) < wait_beam)
