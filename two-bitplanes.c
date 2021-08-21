@@ -46,14 +46,65 @@ void init_copper_list()
 
 }
 
+struct RastPort gfx_rp;
+struct BitMap *gfx_bm;
+
+void _plot(char *ptr,int bpr,int x,int y)
+{
+	int bx = x / 8;
+	ptr[bpr*y+bx] |= 0x80 >> (x & 7);
+}
+
+void _box( char *ptr, int bpr, int x0, int y0, int x1, int y1)
+{
+	int x,y;
+
+	for (y=y0; y<=y1;y++)
+	{
+		for (x=x0; x<=x1;x++)
+		{
+			_plot(ptr, bpr, x, y);
+		}
+	}
+}
+
 void init_planes()
 {
+	int x,y;
+	int size;
 	struct TagItem tags_shared[] = {
 		{AVT_Type, MEMF_SHARED },
 		{TAG_END,TAG_END}};
 
-	plane1 = (uint32) AllocVecTagList( 320/8 * 200, tags_shared);
-	plane2 = (uint32) AllocVecTagList( 320/8 * 200, tags_shared);
+	size = 320/8 * 200;
+
+	plane1 = (uint32) AllocVecTagList( size, tags_shared);
+	plane2 = (uint32) AllocVecTagList( size, tags_shared);
+
+	bzero(plane1, size);
+	bzero(plane2, size);
+
+	gfx_bm = (struct BitMap *) AllocVecTagList( sizeof(struct BitMap), tags_shared);
+
+	InitBitMap( gfx_bm, 2, 320, 200 );
+	gfx_bm->Planes[0] = (void *) plane1;
+	gfx_bm->Planes[1] = (void *) plane2;
+
+	gfx_bm -> BytesPerRow = 320/8;
+	gfx_bm -> Rows = 200;
+
+	InitRastPort( &gfx_rp );
+	gfx_rp.BitMap = gfx_bm;
+
+	SetAPen(&gfx_rp,2);
+	RectFill(&gfx_rp,0,0, 320,200);
+
+	SetAPen(&gfx_rp,1);
+	Move(&gfx_rp,0,0);
+	Draw(&gfx_rp,320,200);
+
+	_box(plane1, 320/8, 20,20,50,50);
+
 }
 
 
@@ -80,9 +131,11 @@ int main()
 
 		if (win)
 		{
+			struct BitMap bm;
+
 			rp = win -> RPort;
 
-			cop_move_(DIWSTART,0x2C81);
+			cop_move_(DIWSTART,0x2081);
 			cop_move_(DIWSTOP,0xF4C1);
 
 			cop_move_(DDFSTART,0x0038);

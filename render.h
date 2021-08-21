@@ -74,7 +74,7 @@ extern void clu( int x, int y );
 extern void crb(int y);
 extern void init_ecs2colors();
 extern void cop_move(union cop data);
-extern void plot( int x,int y);
+extern void plot( int x,int y , char *data);
 extern void cop_move_(uint16 reg, uint16 data);
 extern void cop_skip(union cop data);
 extern void render_copper();

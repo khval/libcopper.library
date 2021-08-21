@@ -106,10 +106,20 @@ void init_ecs2colors()
 
 uint16 hires,planes,ham,lace;
 
-uint64 (*planar_routine) ()=NULL;
+uint64 (*planar_routine) (uint32 *data)=NULL;
 
 extern void *planar_routines[];
 
+uint ddf_wc;
+uint ddf_mix;
+uint ddf_max;
+
+void update_ddf()
+{
+	ddf_wc = WordCount( ddfstart, ddfstop) ;
+	ddf_mix = WordCount( 0,ddfstart);
+	ddf_max = ddf_mix + ddf_wc ;
+}
 
 void cop_move(union cop data)
 {
@@ -126,9 +136,11 @@ void cop_move(union cop data)
 					break;
 
 		case DDFSTART: ddfstart = data.d16.b; 
+					update_ddf();
 					break;
 
 		case DDFSTOP: ddfstop = data.d16.b; 
+					update_ddf();
 					break;
 
 		case COPJMP1: ptr = (union cop *) COP1LC -1;
@@ -181,36 +193,37 @@ void cop_move(union cop data)
 
 
 int ly = -1;
+int datafetch = 0;
 
-void plot( int x,int y)
+
+bool check16( int x,int y )
 {
-	int wc;
 	int miy = (diwstart >> 8);
 	int may = (diwstop >> 8) + 0x100;
-	int mix , max;
 
-	if (ly!=y) printf("%d - %08x\n",y, color[0]);
-
-	wc = WordCount( ddfstart, ddfstop) * lowres_clock;
-
-	mix = WordCount( 0,ddfstart) * lowres_clock;
-	max = mix + wc ;
-
-	ly = y;
-
-	if ((y>=miy) && (y<=may))
+	if ((y>=miy) && (y<may))
 	{
-		if ((x>=mix) && (x<=max))
+		if ((x>=ddf_mix) && (x<ddf_max))
 		{
-			x *= (16 / lowres_clock) ;
-			y *= 2;
-
-planar_routine();
-
-			WritePixelColor(rp,x,y,color[0]);
+			return true;
 		}
 	}
+	return false;
+}
 
+
+void convert16( char *data)
+{
+	planar_routine( (uint32 *) data );
+	planar_routine( (uint32 *) (data + 8) );
+}
+
+void plot4( int x, int y, char *data )
+{
+	WritePixelColor(rp,x,y,color[ *data ++ ]);
+	WritePixelColor(rp,x+=2,y,color[ *data ++ ]);
+	WritePixelColor(rp,x+=2,y,color[ *data ++ ]);
+	WritePixelColor(rp,x+=2,y,color[ *data ++ ]);
 }
 
 
@@ -244,8 +257,15 @@ void cop_wait(union cop data)
 	wait_beam_enable = data.d16.b & 0xFFFE;
 }
 
+uint32 beam_wordpos;
+
 void render_copper()
 {
+	int x,y;
+	uint32 off;
+	char data[16];
+	bool beam_wait = false;
+
 	ptr = (union cop *) copperList;
 
 	bp0ptr = (unsigned char *) bp0;
@@ -265,18 +285,60 @@ void render_copper()
 		{
 			case 0x00000000:
 			case 0x00000001:	cop_move( *ptr ); break;
-			case 0x00010000:	cop_wait( *ptr); break;
+			case 0x00010000:	cop_wait( *ptr);  beam_wait=true; break;
 			case 0x00010001:	cop_skip( *ptr); break;
 		}
 
-		while ((beam_clock & wait_beam_enable) < wait_beam)
+		if ((beam_clock & 3 == 0) || (beam_wait))
 		{
-			beam_clock++;
-			plot( beam_clock & 0xFF, beam_clock >> 8 );
-		}
+			beam_wait = false;
 
-		beam_clock++;
-		plot( beam_clock & 0xFF, beam_clock >> 8 );
+			while ((beam_wordpos & wait_beam_enable) < wait_beam)
+			{
+				if (check16(x,y))
+				{
+					printf("Read %d,%d - offset x %d\n",x,y,  (bp0ptr - (unsigned char *) bp0) % 40);
+
+					while (off<8)
+					{
+						printf("off: %d\n",off);
+						plot4( ddf_mix * 16 + ((x-ddf_mix) *32) + (off * 8) ,  y*2 , data + (off * 4) );
+						off++;
+					}
+
+					convert16( data );
+					off = 0;
+					beam_clock+=4;
+					beam_wordpos  = beam_clock >> 2;		// 4 copper commands per 16pixels.
+					x = beam_wordpos & 0xFF;
+				}
+				else 
+				{
+					beam_clock+= 1 ;					// moves faster in wait mode.
+				}
+
+				beam_wordpos  = beam_clock >> 2;		// 4 copper commands per 16pixels.
+				x = beam_wordpos & 0xFF;
+				y = beam_wordpos >> 8;
+			}
+
+//			if (off == 0) if (check16(x,y) ) convert16( data );
+		}
+		else
+		{
+			if (off<4)
+			{
+				plot4( x*32 + ((off * 4)*2) ,  y*2 , data + (off * 4) );
+				off++;
+			}
+			else
+			{
+				beam_clock++;
+				beam_wordpos  = beam_clock >> 2;		// 4 copper commands per 16pixels.
+				x = beam_wordpos & 0xFF;
+				y = beam_wordpos >> 8;
+			}
+		}
 	}
 }
 
