@@ -21,9 +21,9 @@ void init_copper_list()
 	uint32 *ptr = (uint32 *) copperList;
 
 	setCop( BPL1PTH, plane1 >> 16 );	
-	setCop( BPL1PTL, plane1 && 0xFFFF );	
+	setCop( BPL1PTL, plane1 & 0xFFFF );	
 	setCop( BPL2PTH, plane2 >> 16 );	
-	setCop( BPL2PTL, plane2 && 0xFFFF );	
+	setCop( BPL2PTL, plane2 & 0xFFFF );	
 
 	setCop( BPL1MOD, 0x0 );
 	setCop( BPL2MOD, 0x0 );
