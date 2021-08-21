@@ -7,28 +7,37 @@ typedef unsigned short uint16;
 
 // set some values not importent what values, this is just a test... 
 
-#define INTREQ 2
-#define COPJMP1 4
-#define COPJMP2 8
-#define COP1LCH 18
-#define COP1LCL 20
-#define COP2LCH 22
-#define COP2LCL 24
-#define BPL1PTH 26
-#define BPL1PTL 28
-#define BPL2PTH 30
-#define BPL2PTL 32
-#define BPLCON0 33
+#define INTREQ 0x09C
+#define COPJMP1 0x088
+#define COPJMP2 0x08A
+
+#define COP1LCH 0x080
+#define COP1LCL 0x082
+
+#define COP2LCH 0x084
+#define COP2LCL 0x086
+
+#define BPL1PTH 0x0E0
+#define BPL1PTL 0x0E2
+#define BPL2PTH 0x0E4
+#define BPL2PTL 0x0E6
+
+#define BPLCON0 0x100
+#define BPLCON1 0x102
+#define BPLCON2 0x104
+#define BPLCON3 0x106
+#define BPL1MOD 0x108
+#define BPL2MOD 0x10A
 
 // Display Window
 
-#define DIWSTART 10
-#define DIWSTOP 12
+#define DIWSTART 0x08C
+#define DIWSTOP 0x090
 
 // Data Fetch, (is in clocks, 4 in lowres, 8 in hires)
 
-#define DDFSTART 14
-#define DDFSTOP 16
+#define DDFSTART 0x092
+#define DDFSTOP 0x094
 
 #define COLOR00 0x180
 #define COLOR01 0x182
