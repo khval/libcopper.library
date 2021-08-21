@@ -44,112 +44,106 @@ void initBits2Bytes()
 
 unsigned char *bp0ptr,*bp1ptr,*bp2ptr,*bp3ptr,*bp4ptr,*bp5ptr,*bp6ptr,*bp7ptr;
 
-uint64 draw_1p()
+void convert_1p(uint64 *data)
 {
-	uint64 data = *((uint64 *) bits2bytes[*bp0ptr]);
+	*data = *((uint64 *) bits2bytes[*bp0ptr]);
 	bp0ptr++;
-	return data;
 }
 
-uint64 draw_2p()
+void convert_2p(uint64 *data)
 {
-	uint64 data;
-	printf("%08x %08x\n", bp0ptr,bp1ptr);
-
-	data =	*((uint64 *) bits2bytes0[*bp0ptr]);
-	data |=	*((uint64 *) bits2bytes1[*bp1ptr]);
+	*data =	*((uint64 *) bits2bytes0[*bp0ptr])
+		| *((uint64 *) bits2bytes1[*bp1ptr]);
 
 	bp0ptr++;bp1ptr++;
-	return data;
 }
 
-uint64 draw_3p()
+void convert_3p(uint64 *data)
 {
-	uint64 data =	*((uint64 *) bits2bytes0[*bp0ptr]);
-	data |=		*((uint64 *) bits2bytes1[*bp1ptr]);
-	data |=		*((uint64 *) bits2bytes2[*bp2ptr]);
+	*data =	*((uint64 *) bits2bytes0[*bp0ptr])
+		| *((uint64 *) bits2bytes1[*bp1ptr]) 
+		| *((uint64 *) bits2bytes2[*bp2ptr]);
 
 	bp0ptr++;bp1ptr++;bp2ptr++;
-	return data;
 }
 
-uint64 draw_4p()
+void convert_4p(uint64 *data)
 {
-	uint64 data =	*((uint64 *) bits2bytes0[*bp0ptr]); 
-	data |=		*((uint64 *) bits2bytes1[*bp1ptr]); 
-	data |=		*((uint64 *) bits2bytes2[*bp2ptr]); 
-	data |=		*((uint64 *) bits2bytes3[*bp3ptr]);
+	*data =	*((uint64 *) bits2bytes0[*bp0ptr])
+		| *((uint64 *) bits2bytes1[*bp1ptr]) 
+		| *((uint64 *) bits2bytes2[*bp2ptr]) 
+		| *((uint64 *) bits2bytes3[*bp3ptr]);
 
 	bp0ptr++;bp1ptr++;bp2ptr++;bp3ptr++;
-	return data;
 }
 
-uint64 draw_5p()
+void convert_5p(uint64 *data)
 {
-	uint64 data = *((uint64 *) bits2bytes0[*bp0ptr]); 
-	data |= *((uint64 *) bits2bytes1[*bp1ptr]); 
-	data |= *((uint64 *) bits2bytes2[*bp2ptr]); 
-	data |= *((uint64 *) bits2bytes3[*bp3ptr]); 
-	data |=*((uint64 *) bits2bytes4[*bp4ptr]);
+	*data = *((uint64 *) bits2bytes0[*bp0ptr]) 
+		| *((uint64 *) bits2bytes1[*bp1ptr]) 
+		| *((uint64 *) bits2bytes2[*bp2ptr]) 
+		| *((uint64 *) bits2bytes3[*bp3ptr]) 
+		| *((uint64 *) bits2bytes4[*bp4ptr]);
 
 	bp0ptr++;bp1ptr++;bp2ptr++;bp3ptr++;bp4ptr++;
-	return data;
 }
 
-uint64 draw_6p()
+void convert_6p(uint64 *data)
 {
-	uint64 data = *((uint64 *) bits2bytes0[*bp0ptr]); 
-	data |= *((uint64 *) bits2bytes1[*bp1ptr]); 
-	data |= *((uint64 *) bits2bytes2[*bp2ptr]); 
-	data |= *((uint64 *) bits2bytes3[*bp3ptr]); 
-	data |= *((uint64 *) bits2bytes4[*bp4ptr]); 
-	data |= *((uint64 *) bits2bytes5[*bp5ptr]);
+	*data = *((uint64 *) bits2bytes0[*bp0ptr])
+		| *((uint64 *) bits2bytes1[*bp1ptr]) 
+		| *((uint64 *) bits2bytes2[*bp2ptr]) 
+		| *((uint64 *) bits2bytes3[*bp3ptr]) 
+		| *((uint64 *) bits2bytes4[*bp4ptr]) 
+		| *((uint64 *) bits2bytes5[*bp5ptr]);
 
 	bp0ptr++;bp1ptr++;bp2ptr++;bp3ptr++;bp4ptr++;bp5ptr++;
-	return data;
 }
 
-uint64 draw_7p()
+void convert_7p(uint64 *data)
 {
-	uint64 data = *((uint64 *) bits2bytes0[*bp0ptr]); 
-	data |= *((uint64 *) bits2bytes1[*bp1ptr]); 
-	data |= *((uint64 *) bits2bytes2[*bp2ptr]); 
-	data |= *((uint64 *) bits2bytes3[*bp3ptr]); 
-	data |= *((uint64 *) bits2bytes4[*bp4ptr]); 
-	data |= *((uint64 *) bits2bytes5[*bp5ptr]); 
-	data |= *((uint64 *) bits2bytes6[*bp6ptr]);
+	*data = *((uint64 *) bits2bytes0[*bp0ptr])
+		| *((uint64 *) bits2bytes1[*bp1ptr]) 
+		| *((uint64 *) bits2bytes2[*bp2ptr]) 
+		| *((uint64 *) bits2bytes3[*bp3ptr]) 
+		| *((uint64 *) bits2bytes4[*bp4ptr]) 
+		| *((uint64 *) bits2bytes5[*bp5ptr])
+		| *((uint64 *) bits2bytes5[*bp6ptr]);
 
 	bp0ptr++;bp1ptr++;bp2ptr++;bp3ptr++;bp4ptr++;bp5ptr++;bp6ptr++;
-	return data;
 }
 
-uint64 draw_8p()
+void convert_8p(uint64 *data)
 {
-	uint64 data = *((uint64 *) bits2bytes0[*bp0ptr]); 
-	data |= *((uint64 *) bits2bytes1[*bp1ptr]); 
-	data |= *((uint64 *) bits2bytes2[*bp2ptr]); 
-	data |= *((uint64 *) bits2bytes3[*bp3ptr]); 
-	data |= *((uint64 *) bits2bytes4[*bp4ptr]); 
-	data |= *((uint64 *) bits2bytes5[*bp5ptr]); 
-	data |= *((uint64 *) bits2bytes6[*bp6ptr]); 
-	data |= *((uint64 *) bits2bytes7[*bp7ptr]);
+	*data = *((uint64 *) bits2bytes0[*bp0ptr])
+		|  *((uint64 *) bits2bytes1[*bp1ptr])
+		|  *((uint64 *) bits2bytes2[*bp2ptr])
+		|  *((uint64 *) bits2bytes3[*bp3ptr])
+		|  *((uint64 *) bits2bytes4[*bp4ptr])
+		|  *((uint64 *) bits2bytes5[*bp5ptr])
+		|  *((uint64 *) bits2bytes6[*bp6ptr])
+		|  *((uint64 *) bits2bytes7[*bp7ptr]);
 
 	bp0ptr++;bp1ptr++;bp2ptr++;bp3ptr++;bp4ptr++;bp5ptr++;bp6ptr++;bp7ptr++;
-	return data;
 };
 
 // basicly unrolled routines.
 
+uint64 convert_none()
+{
+	return 0;
+}
+
 void *planar_routines[]  =
 {
-	NULL,
-	draw_1p,
-	draw_2p,
-	draw_3p,
-	draw_4p,
-	draw_5p,
-	draw_6p,
-	draw_7p,
-	draw_8p
+	convert_none,
+	convert_1p,
+	convert_2p,
+	convert_3p,
+	convert_4p,
+	convert_5p,
+	convert_6p,
+	convert_7p,
+	convert_8p
 };
 
