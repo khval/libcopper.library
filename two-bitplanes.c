@@ -25,6 +25,9 @@ void init_copper_list()
 	setCop( BPL2PTH, plane2 >> 16 );	
 	setCop( BPL2PTL, plane2 && 0xFFFF );	
 
+	setCop( BPL1MOD, 0x0 );
+	setCop( BPL2MOD, 0x0 );
+
 	setCop( COLOR00,0x0FFF );	
 	setCop( COLOR01,0x0F00 );	
 	setCop( COLOR02,0x00F0 );	
