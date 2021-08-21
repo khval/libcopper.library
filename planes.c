@@ -44,23 +44,26 @@ void initBits2Bytes()
 
 unsigned char *bp0ptr,*bp1ptr,*bp2ptr,*bp3ptr,*bp4ptr,*bp5ptr,*bp6ptr,*bp7ptr;
 
-uint64 draw_1p(unsigned char *ptr)
+uint64 draw_1p()
 {
 	uint64 data = *((uint64 *) bits2bytes[*bp0ptr]);
 	bp0ptr++;
 	return data;
 }
 
-uint64 draw_2p(unsigned char *ptr)
+uint64 draw_2p()
 {
-	uint64 data =	*((uint64 *) bits2bytes0[*bp0ptr]);
-	data |=		*((uint64 *) bits2bytes1[*bp1ptr]);
+	uint64 data;
+	printf("%08x %08x\n", bp0ptr,bp1ptr);
+
+	data =	*((uint64 *) bits2bytes0[*bp0ptr]);
+	data |=	*((uint64 *) bits2bytes1[*bp1ptr]);
 
 	bp0ptr++;bp1ptr++;
 	return data;
 }
 
-uint64 draw_3p(unsigned char *ptr)
+uint64 draw_3p()
 {
 	uint64 data =	*((uint64 *) bits2bytes0[*bp0ptr]);
 	data |=		*((uint64 *) bits2bytes1[*bp1ptr]);
@@ -70,7 +73,7 @@ uint64 draw_3p(unsigned char *ptr)
 	return data;
 }
 
-uint64 draw_4p(unsigned char *ptr)
+uint64 draw_4p()
 {
 	uint64 data =	*((uint64 *) bits2bytes0[*bp0ptr]); 
 	data |=		*((uint64 *) bits2bytes1[*bp1ptr]); 
@@ -81,7 +84,7 @@ uint64 draw_4p(unsigned char *ptr)
 	return data;
 }
 
-uint64 draw_5p(unsigned char *ptr)
+uint64 draw_5p()
 {
 	uint64 data = *((uint64 *) bits2bytes0[*bp0ptr]); 
 	data |= *((uint64 *) bits2bytes1[*bp1ptr]); 
@@ -93,7 +96,7 @@ uint64 draw_5p(unsigned char *ptr)
 	return data;
 }
 
-uint64 draw_6p(unsigned char *ptr)
+uint64 draw_6p()
 {
 	uint64 data = *((uint64 *) bits2bytes0[*bp0ptr]); 
 	data |= *((uint64 *) bits2bytes1[*bp1ptr]); 
@@ -106,7 +109,7 @@ uint64 draw_6p(unsigned char *ptr)
 	return data;
 }
 
-uint64 draw_7p(unsigned char *ptr)
+uint64 draw_7p()
 {
 	uint64 data = *((uint64 *) bits2bytes0[*bp0ptr]); 
 	data |= *((uint64 *) bits2bytes1[*bp1ptr]); 
@@ -120,7 +123,7 @@ uint64 draw_7p(unsigned char *ptr)
 	return data;
 }
 
-uint64 draw_8p(unsigned char *ptr)
+uint64 draw_8p()
 {
 	uint64 data = *((uint64 *) bits2bytes0[*bp0ptr]); 
 	data |= *((uint64 *) bits2bytes1[*bp1ptr]); 

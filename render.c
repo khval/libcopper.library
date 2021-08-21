@@ -15,14 +15,7 @@ uint32 copperList[1000];
 uint32 copperl1;
 uint32 copperl2;
 
-uint32 bp1;
-uint32 bp2;
-uint32 bp3;
-uint32 bp4;
-uint32 bp5;
-uint32 bp6;
-uint32 bp7;
-uint32 bp8;
+uint32 bp0, bp1, bp2, bp3, bp4, bp5, bp6, bp7;
 
 ULONG last_VWaitPos = 0, last_HWaitPos = 0;
 ULONG VWaitPos = 0, HWaitPos = 0;
@@ -35,6 +28,8 @@ uint32 diwstart, diwstop, ddfstart, ddfstop;
 
 uint32 beam_clock = 0;
 union cop *ptr;
+
+extern unsigned char *bp0ptr,*bp1ptr,*bp2ptr,*bp3ptr,*bp4ptr,*bp5ptr,*bp6ptr,*bp7ptr;
 
 struct RastPort *rp = NULL;
 
@@ -111,8 +106,15 @@ void init_ecs2colors()
 
 uint16 hires,planes,ham,lace;
 
+uint64 (*planar_routine) ()=NULL;
+
+extern void *planar_routines[];
+
+
 void cop_move(union cop data)
 {
+	printf("Cop_move %04x\n",data.d16.a);
+
 	switch ( data.d16.a )
 	{
 		case INTREQ:	break;
@@ -142,16 +144,32 @@ void cop_move(union cop data)
 		case COLOR04: color[4] = ecs2argb[data.d16.b];	break;
 		case COLOR05: color[5] = ecs2argb[data.d16.b];	break;
 
-		case BPL1PTH: setHigh16(bp1,data.d16.b); break;
-		case BPL1PTL: setLow16(bp1,data.d16.b); break;
-		case BPL2PTH: setHigh16(bp2,data.d16.b); break;
-		case BPL2PTL: setLow16(bp2,data.d16.b); break;
+		case BPL1PTH:
+					printf("BPL1PTH %04x\n",data.d16.b);
+					setHigh16(bp0,data.d16.b); 
+					bp0ptr = (unsigned char *) bp0;
+					break;
+
+		case BPL1PTL: 
+					printf("BPL1PTL %04x\n",data.d16.b);
+					setLow16(bp0,data.d16.b); 
+					bp0ptr = (unsigned char *) bp0;
+					break;
+
+		case BPL2PTH: setHigh16(bp1,data.d16.b);
+					bp1ptr = (unsigned char *) bp1;
+					break;
+
+		case BPL2PTL: setLow16(bp1,data.d16.b);
+					bp1ptr = (unsigned char *) bp1;
+					break;
 
 		case BPLCON0:
 					hires = data.d16.b & 0x8000;
 					planes = (data.d16.b & 0x7000) >> 12;
 					ham = data.d16.b & (1<<11);
 					lace = data.d16.b & (1<<2);
+					planar_routine = planar_routines[ planes ];
 					break;
 
 		case COP1LCH: setHigh16(COP1LC,data.d16.b); break;
@@ -186,6 +204,9 @@ void plot( int x,int y)
 		{
 			x *= (16 / lowres_clock) ;
 			y *= 2;
+
+planar_routine();
+
 			WritePixelColor(rp,x,y,color[0]);
 		}
 	}
@@ -223,12 +244,11 @@ void cop_wait(union cop data)
 	wait_beam_enable = data.d16.b & 0xFFFE;
 }
 
-unsigned char *bp1ptr,*bp2ptr,*bp3ptr,*bp4ptr,*bp5ptr,*bp6ptr,*bp7ptr,*bp8ptr;
-
 void render_copper()
 {
 	ptr = (union cop *) copperList;
 
+	bp0ptr = (unsigned char *) bp0;
 	bp1ptr = (unsigned char *) bp1;
 	bp2ptr = (unsigned char *) bp2;
 	bp3ptr = (unsigned char *) bp3;
@@ -236,7 +256,6 @@ void render_copper()
 	bp5ptr = (unsigned char *) bp5;
 	bp6ptr = (unsigned char *) bp6;
 	bp7ptr = (unsigned char *) bp7;
-	bp8ptr = (unsigned char *) bp8;
 
 	for (;ptr -> d32 != 0xFFFFFFFE;ptr++)
 	{
