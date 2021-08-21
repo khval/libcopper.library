@@ -242,12 +242,12 @@ void render_copper()
 	{
 		printf("%-8d, %04x,%04x -- %08x\n",ptr - (union cop *) copperList, ptr -> d16.a,ptr -> d16.b,beam_clock);
 
-		switch (ptr -> d32 & 0x1001)
+		switch (ptr -> d32 & 0x00010001)
 		{
-			case 0x0000:
-			case 0x0001:	cop_move( *ptr ); break;
-			case 0x1000:	cop_wait( *ptr); break;
-			case 0x1001:	cop_skip( *ptr); break;
+			case 0x00000000:
+			case 0x00000001:	cop_move( *ptr ); break;
+			case 0x00010000:	cop_wait( *ptr); break;
+			case 0x00010001:	cop_skip( *ptr); break;
 		}
 
 		while ((beam_clock & wait_beam_enable) < wait_beam)
