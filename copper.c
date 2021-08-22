@@ -17,25 +17,22 @@ void init_copper_list()
 
 copperl1 = (uint32) ptr;
 
-	setCop( COLOR00,0x0F00 );	
-	setCop( 0x0F01,0x8F00 );	
-	setCop( INTREQ,0x8010 );	
-	setCop( 0x00E3,0x80FE );	
-	setCop( 0x7F01,0x7F01 );	
+	setCop( COLOR00,0x0F00 );		// move
+	setCop( 0x0F01,0x8F00 );			// wait
+	setCop( INTREQ,0x8010 );		// move
+	setCop( 0x00E3,0x80FE );		// wait
+	setCop( 0x7F01,0x7F01 );			// skip
 	setCop( COPJMP1,0x0000 );	
 
 copperl2 = (uint32) ptr;
 
-	setCop( COLOR00,0x0F0 );	
-	setCop( 0x0F01,0x8F00 );	
-	setCop( INTREQ,0x8010 );	
-	setCop( 0x00E3,0x80FE );
-	setCop( 0xFF01,0xFE01 );	
+	setCop( COLOR00,0x0F0 );		// move
+	setCop( 0x0F01,0x8F00 );			// wait
+	setCop( INTREQ,0x8010 );		// move
+	setCop( 0x00E3,0x80FE );		// wait
+	setCop( 0xFF01,0xFE01 );			// skip
 	setCop( COPJMP2,0x0000 );	
 	setCop( 0xFFFF,0xFFFE );	
-
-//	COP1LC = copperl1;
-//	COP2LC = copperl2;
 
 	cop_move_(COP1LCH,copperl1 >> 16);
 	cop_move_(COP1LCL,copperl1 & 0xFFFF);

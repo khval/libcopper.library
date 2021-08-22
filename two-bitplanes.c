@@ -124,7 +124,7 @@ int main()
 			win = OpenWindowTags( NULL, 
 				WA_Left,320,
 				WA_Top,20,
-				WA_Width, 640,
+				WA_Width, 640+64,
 				WA_Height, 520,
 				TAG_END);
 		}
