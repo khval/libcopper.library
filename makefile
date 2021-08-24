@@ -18,10 +18,16 @@ dependent_c_files += planes.c
 
 dependent_files = ${dependent_c_files:.c=.o}
 
-elf_files += copper.elf
-elf_files += two-bitplanes.elf
+elf_files += tests/copper.c
+elf_files += tests/two-bitplanes.c
+elf_files += tests/copperbar.c
+elf_files += tests/CopperCheck.c
+elf_files += tests/CopperSplit.c
+elf_files += tests/OSCopper.c
 
-all_files +=  ${elf_files} ${dependent_files}
+elf_files_elf = ${elf_files:.c=.elf}
+
+all_files +=  ${elf_files_elf} ${dependent_files}
 
 # the process
 

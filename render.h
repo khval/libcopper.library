@@ -67,7 +67,7 @@ extern uint32 ecs2argb[0x10000];
 extern uint32 COP1LC, COP2LC;
 extern uint32 diwstart, diwstop, ddfstart, ddfstop;
 
-extern struct RastPort *rp;
+extern struct RastPort *copper_rp;
 
 extern int WordCount( int ddfstart, int ddfstop);
 extern void clu( int x, int y );
@@ -77,9 +77,6 @@ extern void cop_move(union cop data);
 extern void plot( int x,int y , char *data);
 extern void cop_move_(uint16 reg, uint16 data);
 extern void cop_skip(union cop data);
-extern void render_copper();
-
-
-
-
+extern void render_copper(uint32 *copperList, struct RastPort *rp);
+extern void dump_copper(uint32 *copperList);
 

@@ -18,12 +18,14 @@
 #include "common.h"
 #include "init.h"
 
+struct Library 			*LibBlitterBase = NULL;
+struct LibBlitterIFace		*ILibBlitter = NULL;
+
 struct Library			*IntuitionBase = NULL;
 struct IntuitionIFace		*IIntuition = NULL;
 
 struct Library			*GraphicsBase = NULL;
 struct GraphicsIFace		*IGraphics = NULL;
-
 
 unsigned char bits2bytes_data[256*8*8];		// 256 values, 8pixels / bits, 8 plaines
 unsigned char *bits2bytes[256*8];			// 256 values. 
@@ -56,6 +58,7 @@ bool open_libs()
 
 	if ( ! open_lib( "intuition.library", 51L , "main", 1, &IntuitionBase, (struct Interface **) &IIntuition  ) ) return FALSE;
 	if ( ! open_lib( "graphics.library", 54L , "main", 1, &GraphicsBase, (struct Interface **) &IGraphics  ) ) return FALSE;
+	if ( ! open_lib( "libblitter.library", 53L , "main", 1, &LibBlitterBase, (struct Interface **) &ILibBlitter  ) ) return FALSE;
 
 	initBits2Bytes();
 
@@ -66,6 +69,7 @@ void close_libs()
 {
 	close_lib(Intuition);
 	close_lib(Graphics);
+	close_lib(LibBlitter);
 }
 
 

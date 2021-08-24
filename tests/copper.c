@@ -64,7 +64,7 @@ int main()
 
 		if (win)
 		{
-			rp = win -> RPort;
+			copper_rp = win -> RPort;
 
 			cop_move_(DIWSTART,0x2C81);
 			cop_move_(DIWSTOP,0xF4C1);
@@ -75,7 +75,7 @@ int main()
 			int wc = WordCount( ddfstart, ddfstop);
 
 			init_copper_list();
-			render_copper();
+			render_copper( copperList, copper_rp );
 
 			printf("data fetch start %d (pixels %d)\n",ddfstart,WordCount( 0,ddfstart)*16);
 			printf("data fetch word count %d (pixels %d)\n",wc,wc*16);
