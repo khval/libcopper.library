@@ -39,19 +39,31 @@ struct RastPort *copper_rp = NULL;
 // ddfstart = ddfstop - (8 *(wc-1))
 // -------------------
 
-int WordCount( int ddfstart, int ddfstop)
+int toDDFSTOP( int hires, int ddstart, int wc )
+{
+	if ( ! hires )
+	{
+		// lowres
+		return  8 * (wc - 1)  + ddstart;
+	}
+
+
+	return  4 * (wc - 2)  + ddstart;
+
+}
+
+int DDFWordCount( int hires, int ddfstart, int ddfstop)
 {
 	int wc;
 
-	// lowres, 8 clocks 
-	wc = ((ddfstop- ddfstart) / 8) +1 ;
+	if ( !hires)
+	{
+		// lowres, 8 clocks 
+		return  ((ddfstop- ddfstart) / 8) +1 ;
+	}
 
-/*
 	// hires, 4 clocks
-	wc = ((ddfstop- ddfstart) / 4) +2 ;
-*/
-
-	return wc;
+	return ((ddfstop- ddfstart) / 4) +2 ;
 }
 
 
@@ -76,7 +88,7 @@ void crb(int y)
 	int mix = diwstart & 0xFF;
 	int max = diwstop & 0xFF;
 
-	int wc = WordCount( mix, max);
+	int wc = DDFWordCount( 0, mix, max);
 
 	x = wc*16 +20 ;
 
@@ -149,8 +161,8 @@ void update_display_offsets()
 
 void update_ddf()
 {
-	ddf_wc = WordCount( ddfstart, ddfstop) ;
-	ddf_mix = WordCount( 0,ddfstart);
+	ddf_wc = DDFWordCount( 0, ddfstart, ddfstop) ;
+	ddf_mix = DDFWordCount( 0, 0,ddfstart);
 	ddf_max = ddf_mix + ddf_wc ;
 	update_display_offsets();
 }
@@ -304,7 +316,7 @@ void cop_wait(union cop data)
 
 	if (wait_beam_enable < wait_beam)
 	{
-		printf("bad wait, mask smaller the delay... wait can't get to end\n");
+		printf("bad wait, mask smaller then delay... wait can't get to end\n");
 		wait_beam = 0;
 	}
 }

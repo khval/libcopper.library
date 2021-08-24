@@ -19,6 +19,8 @@
 
 #include "common.h"
 
+#include "render.h"
+
 //struct RastPort *rport;
 
 #define CMOVEA(c,a,b) { CMove(c,a,b);CBump(c); }
@@ -35,51 +37,166 @@
 
 #define Shr(x,n) (x << n)
 
+struct Window *win = NULL;
+
+struct BitMap *gfx_bm = NULL;
+
 bool initScreen()
 {
-	screen=OpenScreenTags(NULL,
-			SA_Title,"OS Copper",
-//	SA_Pens,,
-			SA_Depth,4,
-			SA_Width, 320,
-			SA_Height, 256,
-			TAG_END);
-
-	if (!screen) return false;
-
-	window=OpenWindowTags(NULL,
+	win = OpenWindowTags(NULL,
 			WA_IDCMP,IDCMP_MOUSEBUTTONS,
 			WA_Flags,WFLG_NOCAREREFRESH |
-					WFLG_ACTIVATE |
-					WFLG_BORDERLESS |
-					WFLG_BACKDROP,
-			WA_CustomScreen,screen,
+					WFLG_ACTIVATE,
+			WA_Left,640,
+			WA_Top,20,
+			WA_Width,640+64,
+			WA_Height,480,
+
 			TAG_END);
 
-	if (!window) return false;
-
-#ifdef __amigaos3__
-	myucoplist=AllocVec(sizeof(struct UCopList),MEMF_PUBLIC | MEMF_CLEAR);
-#endif
-
-#ifdef __amigaos4__
-	myucoplist=AllocVecTags(sizeof(struct UCopList),
-				AVT_Type, MEMF_SHARED, 
-				AVT_Alignment,  16, 
-				AVT_ClearWithValue, 0,
-				TAG_DONE);
-#endif
-
-	if (!myucoplist) return false;	
+	if (!win) return false;
 
 	return true;
 }
 
+void closeDown()
+{
+	if (win) CloseWindow(win);
+}
+
+
 void errors()
 {
-	if (!screen) Printf("Unable to open screen.\n");
-	if (!window) Printf("Unable to open window.\n");
-	if (!myucoplist) Printf("Unable to allocate myucoplist memory.\n");
+	if (!win) Printf("Unable to open window.\n");
+}
+
+struct BitMap bitmap;
+uint32 planesize;
+uint32 modulo;
+uint8 *bitplane;
+
+
+
+void init_copper(int bm_width, int bm_height, int linestart, int height)
+{
+	uint32 backrgb = 0x000;
+	int i;
+	int depth = 1;
+	uint32 *ptr = copperList;
+
+	setCop(COLOR01,0xFFF);	// +1
+
+	setCop(DIWSTART,0x2C81);
+	setCop(DIWSTOP,0x7EC1);
+	setCop(DDFSTART,0x0038);
+	setCop(DDFSTOP, toDDFSTOP( 0, 0x0038 , (bm_width/16)) );	
+
+	setCop( BPL1PTH, (uint32) bitplane >> 16 );
+	setCop( BPL1PTL, (uint32) bitplane & 0xFFFF );
+
+	setCop( BPL1MOD, 0x0 );
+	setCop( BPL2MOD, 0x0 );
+
+	setCop( BPLCON0, depth << 12  |  0x0000 );
+
+	for (i=linestart;i<linestart+height;i++)
+	{
+		setCop(i<<8|1,0xFF00);		// +1
+
+		switch (i)
+		{
+			case 127:
+				setCop(BPL1MOD,-1*(planesize/2));		// +3
+				setCop(BPLPT, (uint32) bitplane>>16);
+				setCop(BPLPT+2,(uint32)bitplane & 0xFFFF);
+				break;
+
+			case 128:
+				setCop(BPL1MOD,modulo);
+				break;
+		}
+
+		setCop(BPLCON3,0);					// +4
+		setCop(COLOR01,(i-linestart)&0xFFF);
+		setCop(BPLCON3,0x200);
+		setCop(COLOR01,(0xFFF-i)&0xFFF);
+	}
+
+	// +3
+
+	setCop(i<<8|1,0xFF00);
+	setCop(COLOR01,backrgb);
+	setCop(0xFFFF,0xFFFE);
+}
+
+struct RastPort gfx_rp;
+
+void init_planes()
+{
+	int x,y;
+	int size;
+	struct TagItem tags_shared[] = {
+		{AVT_Type, MEMF_SHARED },
+		{TAG_END,TAG_END}};
+
+	size = 320/8 * 200;
+
+	bitplane = (uint32) AllocVecTagList( size, tags_shared);
+
+	bzero(bitplane, size);
+
+	gfx_bm = (struct BitMap *) AllocVecTagList( sizeof(struct BitMap), tags_shared);
+
+	InitBitMap( gfx_bm, 1, 320, 200 );
+	gfx_bm->Planes[0] = (void *) bitplane;
+	gfx_bm -> BytesPerRow = 320/8;
+	gfx_bm -> Rows = 200;
+
+	InitRastPort( &gfx_rp );
+	gfx_rp.BitMap = gfx_bm;
+
+	SetAPen(&gfx_rp,2);
+	RectFill(&gfx_rp,0,0, 320,200);
+
+	SetAPen(&gfx_rp,1);
+	Move(&gfx_rp,0,0);
+	Draw(&gfx_rp,320,200);
+
+}
+
+void old_code()
+{
+	int x,y;
+
+		struct RastPort rport;
+
+		InitRastPort( &rport );
+		bzero( bitplane,sizeof(bitplane) );
+		bitmap.BytesPerRow = 320/8;
+		bitmap.Rows = 200;
+		bitmap.Planes[0] = bitplane;
+		bitmap.Depth = 1;
+		rport.BitMap = &bitmap;
+		modulo=bitmap.BytesPerRow;
+		planesize=modulo* bitmap.Rows;
+
+		SetAPen(&rport,1);
+//		Box(&rport,0,linestart,320-1,200-1,1);
+
+		for (y=0;y<64;y+=64)
+		{
+			for (x=0;x<256;x+=64)
+			{
+				RectFill(&rport,x,y,x+31,y+31);
+//				Box(&rport,x,y,32,32,1);
+			}
+			
+			for (x=32;x<288;x+=64)
+			{
+				RectFill(&rport,x,y+32,x+31,y+63);
+//				Box(&rport,x,y+32,32,32,1);
+			}
+		}
 }
 
 int main_prog()
@@ -90,79 +207,27 @@ int main_prog()
 		int i;
 		int x,y;
 		uint32 backrgb;
-		int linestart=screen -> BarHeight+1;
-		int lines=screen -> Height-linestart;
-		int width=screen -> Width;
+		int linestart=0;
+		int lines=win -> Height;
+		int width=win -> Width;
 	
-		struct RastPort *rport=window -> RPort;
-		struct BitMap *bitmap=screen -> RastPort.BitMap;
-		uint32 modulo=bitmap -> BytesPerRow-40;
-		uint32 planesize=modulo*screen -> Height;
-		ULONG bitplane=(ULONG) bitmap -> Planes[0];
+		init_ecs2colors();
+
+		init_planes();
+		init_copper( 320,200, 0,win->Height);
 	
-		viewport=ViewPortAddress(window);
-		backrgb= ((ULONG *) viewport -> ColorMap -> ColorTable)[0];
+		render_copper( copperList, win -> RPort );
 
-		SetColour(screen,0,0,0,0);
-		SetColour(screen,1,255,255,255);
-		SetRast(rport,1);
-		Box(rport,0,linestart,width-1,screen -> Height-1,1);
 	
-		for (y=0;y<64;y+=64)
-		{
-			for (x=0;x<256;x+=64)
-			{
-				RectFill(rport,x,y,x+31,y+31);
-				Box(rport,x,y,32,32,1);
-			}
-			
-			for (x=32;x<288;x+=64)
-			{
-				RectFill(rport,x,y+32,x+31,y+63);
-				Box(rport,x,y+32,32,32,1);
-			}
-		}
-		
-		CINIT(myucoplist, 1+ (lines*(1+3+4)) + 3 );
+//		WaitLeftMouse(win);
 
 
-		CMOVEA(myucoplist,COLOR(1),0xFFF);	// +1
+		int wc = DDFWordCount( 0, ddfstart, ddfstop);
 
-		for (i=linestart;i<lines;i++)
-		{
-			CWAIT(myucoplist,i,0);		// +1
+		printf("data fetch start %d (pixels %d)\n",ddfstart,DDFWordCount( 0, 0,ddfstart)*16);
+		printf("data fetch word count %d (pixels %d)\n",wc,wc*16);
 
-			switch (i)
-			{
-				case 127:
-					CMOVEA(myucoplist,BPL1MOD,-1*(planesize/2));		// +3
-					CMOVEA(myucoplist,BPLPT,Shr(bitplane,16));
-					CMOVEA(myucoplist,BPLPT+2,bitplane & 0xFFFF);
-					break;
-
-				case 128:
-					CMOVEA(myucoplist,BPL1MOD,modulo);
-					break;
-			}
-
-			CMOVEA(myucoplist,BPLCON3,0);					// +4
-			CMOVEA(myucoplist,COLOR(1),(i-linestart)&0xFFF);
-			CMOVEA(myucoplist,BPLCON3,0x200);
-			CMOVEA(myucoplist,COLOR(1),(0xFFF-i)&0xFFF);
-		}
-
-		// +3
-
-		CWAIT(myucoplist,i,0);
-		CMOVEA(myucoplist,COLOR(1),backrgb);
-		CEND(myucoplist);
-	
-		Forbid();
-		viewport -> UCopIns = myucoplist;
-		Permit();
-		RethinkDisplay();
-	
-		WaitLeftMouse(window);
+		getchar();
 	}
 	else
 	{

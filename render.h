@@ -69,7 +69,8 @@ extern uint32 diwstart, diwstop, ddfstart, ddfstop;
 
 extern struct RastPort *copper_rp;
 
-extern int WordCount( int ddfstart, int ddfstop);
+extern int toDDFSTOP( int hires, int ddstart, int wc );
+extern int DDFWordCount( int hires, int ddfstart, int ddfstop);
 extern void clu( int x, int y );
 extern void crb(int y);
 extern void init_ecs2colors();
