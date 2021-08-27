@@ -15,6 +15,7 @@ incdir += -I../
 dependent_c_files += init.c 
 dependent_c_files += render.c 
 dependent_c_files += planes.c 
+dependent_c_files += useful_for_tests.c
 
 dependent_files = ${dependent_c_files:.c=.o}
 
