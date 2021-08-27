@@ -12,6 +12,7 @@
 #include "render.h"
 
 uint32 copperList[2000];
+
 uint32 copperl1;
 uint32 copperl2;
 
@@ -39,28 +40,27 @@ struct RastPort *copper_rp = NULL;
 // ddfstart = ddfstop - (8 *(wc-1))
 // -------------------
 
-int toDDFSTOP( int hires, int ddstart, int wc )
+int WordCountToDispDataFetchStop( int hires, int ddstart, int wc )
 {
 	if ( ! hires )
 	{
 		// lowres
 		return  8 * (wc - 1)  + ddstart;
 	}
-
-
-	return  4 * (wc - 2)  + ddstart;
-
+	else return  4 * (wc - 2)  + ddstart;
 }
 
-int DDFWordCount( int hires, int ddfstart, int ddfstop)
+int DispWinToDispDataFetch(int hires, int diwstart)
 {
-	int wc;
+	if (!hires)	return (diwstart - 17) / 2;
 
-	if ( !hires)
-	{
-		// lowres, 8 clocks 
-		return  ((ddfstop- ddfstart) / 8) +1 ;
-	}
+	return (diwstart - 9) / 2;
+}
+
+int DispDataFetchWordCount( int hires, int ddfstart, int ddfstop)
+{
+	// lowres, 8 clocks 
+	if ( !hires)	return  ((ddfstop- ddfstart) / 8) +1 ;
 
 	// hires, 4 clocks
 	return ((ddfstop- ddfstart) / 4) +2 ;
@@ -88,7 +88,7 @@ void crb(int y)
 	int mix = diwstart & 0xFF;
 	int max = diwstop & 0xFF;
 
-	int wc = DDFWordCount( 0, mix, max);
+	int wc = DispDataFetchWordCount( 0, mix, max);
 
 	x = wc*16 +20 ;
 
@@ -148,7 +148,7 @@ void update_display_offsets()
 	}
 	else
 	{
-		display_scale_x = 1;
+		display_scale_x = 2;
 		display_scale_y = 2;
 		pixels_per_chunk = 4;
 		num_chunks = 4;
@@ -161,11 +161,20 @@ void update_display_offsets()
 
 void update_ddf()
 {
-	ddf_wc = DDFWordCount( 0, ddfstart, ddfstop) ;
-	ddf_mix = DDFWordCount( 0, 0,ddfstart);
+	ddf_wc = DispDataFetchWordCount( 0, ddfstart, ddfstop) ;
+	ddf_mix = DispDataFetchWordCount( 0, 0,ddfstart);
 	ddf_max = ddf_mix + ddf_wc ;
 	update_display_offsets();
 }
+
+struct 
+{
+	uint32 x0;
+	uint32 y0;
+	uint32 x1;
+	uint32 y1;
+} dispwindow;
+
 
 void cop_move(union cop data)
 {
@@ -175,10 +184,13 @@ void cop_move(union cop data)
 	{
 		case INTREQ:	break;
 		case DIWSTART: diwstart = data.d16.b; 
-//					clu( diwstart & 0xFF, diwstart >> 8 );
+					dispwindow.y0 = diwstart>>8 ;
+					dispwindow.x0 = diwstart & 0xFF ;
 					break;
+
 		case DIWSTOP: diwstop = data.d16.b; 
-//					crb(  (diwstop >> 8) + 0x100 );
+					dispwindow.y1 = diwstop & 0x8000 ? (diwstop >> 8) : (diwstop >> 8) + 256;
+					dispwindow.x1 = diwstop & 0x80 ? (diwstop & 0xFF)  : (diwstop & 0xFF) + 256;
 					break;
 
 		case DDFSTART: ddfstart = data.d16.b; 
@@ -342,10 +354,38 @@ void dump_copper(uint32 *copperList)
 		}
 
 		printf("%-8s: %04x,%04x\n", cmd, ptr -> d16.a , ptr -> d16.b ); 
-
 	}
 
 	printf("%-8s: %04x,%04x\n", "END",  0xFFFF , 0xFFFE ); 
+}
+
+static void box(struct RastPort *rp,int x0,int y0,int x1,int y1)
+{
+	Move(rp,x0,y0);
+	Draw(rp,x1,y0);
+	Draw(rp,x1,y1);
+	Draw(rp,x0,y1);
+	Draw(rp,x0,y0);
+}
+
+void render_DisplayWindow(struct RastPort *rp)
+{
+	int x0;
+	int x1;
+
+	int r;
+	SetAPen(rp,1);
+
+	printf("from %08x,%08x to %08x,%08x, dx %d dy %d\n",
+		dispwindow.x0,dispwindow.y0,dispwindow.x1,dispwindow.y1, 
+			(dispwindow.x1 - dispwindow.x0) * 8,
+			dispwindow.y1 - dispwindow.y0);
+
+	x0 = (dispwindow.x0 - 0x79) * 8;
+	x1 = (dispwindow.x1 - 0x79) * 8;
+
+	for (r=-2;r<2;r++)
+		box(rp,x0+r,dispwindow.y0+r,x1+r,dispwindow.y1+r);
 }
 
 void render_copper(uint32 *copperList, struct RastPort *rp)
@@ -461,6 +501,8 @@ void render_copper(uint32 *copperList, struct RastPort *rp)
 			}
 		}
 	}
+
+	render_DisplayWindow(rp);
 }
 
 
