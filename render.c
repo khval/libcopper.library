@@ -11,7 +11,7 @@
 
 #include "render.h"
 
-uint32 copperList[1000];
+uint32 copperList[2000];
 uint32 copperl1;
 uint32 copperl2;
 

@@ -59,7 +59,7 @@ union cop
 	} d16;
 };
 
-extern uint32 copperList[1000];
+extern uint32 copperList[2000];
 extern uint32 copperl1;
 extern uint32 copperl2;
 extern uint32 ecs2argb[0x10000];
