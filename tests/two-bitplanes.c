@@ -141,12 +141,12 @@ int main()
 			cop_move_(DDFSTART,0x0038);
 			cop_move_(DDFSTOP,0x00D0);
 
-			int wc = DDFWordCount( 0, ddfstart, ddfstop);
+			int wc = DispDataFetchWordCount( 0, ddfstart, ddfstop);
 
 			init_copper_list();
 			render_copper( copperList, copper_rp );
 
-			printf("data fetch start %d (pixels %d)\n",ddfstart,DDFWordCount(0, 0,ddfstart)*16);
+			printf("data fetch start %d (pixels %d)\n",ddfstart,DispDataFetchWordCount(0, 0,ddfstart)*16);
 			printf("data fetch word count %d (pixels %d)\n",wc,wc*16);
 
 			int diwstarty = diwstart >> 8 ;
@@ -154,7 +154,8 @@ int main()
 
 			printf("rows %d\n", (diwstopy & 0x80 ? diwstopy : diwstopy + 0x100) - diwstarty );
 
-			getchar();
+			WaitLeftMouse(win);
+//			getchar();
 
 			CloseWindow(win);
 		}

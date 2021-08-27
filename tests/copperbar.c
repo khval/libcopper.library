@@ -133,7 +133,7 @@ void init_copper(int linestart, int height)
 
 	// 3 instructions per line, and 3 extra at the end.
 
-	for (y=linestart;y<height;y++)
+	for (y=linestart;y<linestart+height;y++)
 	{
 		setCop( (y<<8) | 1 , 0xFF00 );			// 0
 		setCop(BPLCON3,0);				// 1

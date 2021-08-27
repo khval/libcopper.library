@@ -95,8 +95,8 @@ int main_prog()
 		dump_copper( copperList );
 		render_copper( copperList , win -> RPort );
 
-//		WaitLeftMouse(window);
-		getchar();
+		WaitLeftMouse(win);
+//		getchar();
 	}
 	else
 	{

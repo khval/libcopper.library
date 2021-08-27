@@ -89,7 +89,7 @@ void init_copper(int bm_width, int bm_height, int linestart, int height)
 	setCop(DIWSTART,0x2C81);
 	setCop(DIWSTOP,0x7EC1);
 	setCop(DDFSTART,0x0038);
-	setCop(DDFSTOP, toDDFSTOP( 0, 0x0038 , (bm_width/16)) );	
+	setCop(DDFSTOP, WordCountToDispDataFetchStop( 0, 0x0038 , (bm_width/16)) );	
 
 	setCop( BPL1PTH, (uint32) bitplane >> 16 );
 	setCop( BPL1PTL, (uint32) bitplane & 0xFFFF );
@@ -222,9 +222,9 @@ int main_prog()
 //		WaitLeftMouse(win);
 
 
-		int wc = DDFWordCount( 0, ddfstart, ddfstop);
+		int wc = DispDataFetchWordCount( 0, ddfstart, ddfstop);
 
-		printf("data fetch start %d (pixels %d)\n",ddfstart,DDFWordCount( 0, 0,ddfstart)*16);
+		printf("data fetch start %d (pixels %d)\n",ddfstart,DispDataFetchWordCount( 0, 0,ddfstart)*16);
 		printf("data fetch word count %d (pixels %d)\n",wc,wc*16);
 
 		getchar();
