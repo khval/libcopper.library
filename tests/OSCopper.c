@@ -18,56 +18,61 @@
 #include	<exec/memory.h>
 
 #include "common.h"
-#include "../debug.h"
 
+#include "render.h"
+
+struct Window *win;
 
 bool initScreen()
 {
-	screen=OpenScreenTags(NULL,
-					SA_Title,"OS Copper",
-//					SA_Pens,[-1]:INT,
-					SA_Depth,4,
-					TAG_END);
-
-	if (!screen) return false;
-
-	window=OpenWindowTags(NULL,
+	win=OpenWindowTags(NULL,
 					WA_IDCMP,IDCMP_MOUSEBUTTONS,
+					WA_Left,640,
+					WA_Width,640+64,
+					WA_Height,400,
 					WA_Flags,WFLG_NOCAREREFRESH |
-							WFLG_ACTIVATE |
-							WFLG_BORDERLESS |
-							WFLG_BACKDROP,
-					WA_CustomScreen,screen,
+							WFLG_ACTIVATE,
 					TAG_END);
 
-	if (!window) return false;
-
-#ifdef __amigaos3__
-	myucoplist=AllocVec(sizeof(struct UCopList),MEMF_PUBLIC | MEMF_CLEAR);
-#endif
-
-#ifdef __amigaos4__
-	myucoplist=AllocVecTags(sizeof(struct UCopList),
-			AVT_Type, MEMF_SHARED, 
-			AVT_Alignment,  16, 
-			AVT_ClearWithValue, 0,
-			TAG_DONE);
-#endif
-
-	if (!myucoplist) return false;	
+	if (!win) return false;
 
 	return true;
 }
 
 void errors()
 {
-	if (!screen) Printf("Unable to open screen.\n");
-	if (!window) Printf("Unable to open window.\n");
-	if (!myucoplist) Printf("Unable to allocate myucoplist memory.\n");
+	if (!win) Printf("Unable to open window.\n");
 }
 
 const char *txt = "Cooper test";
+
+void init_copper(int linestart, int height)
+{
+	int y;
+	uint32 *ptr = copperList;
+	uint32 backrgb = 0x000;
+
+	// 5 instructions per line, and 3 extra at the end.
 	
+	for (y=linestart;y<linestart+height;y++)
+	{
+		setCop( (y<<8) | 1 , 0xFF00 );			// 0
+		setCop(BPLCON3,0);
+		setCop(COLOR01,(y-linestart) & 0xFFF);
+		setCop(BPLCON3,0x200);
+		setCop(COLOR03,(0xFFF-y) & 0xFFF);
+	}
+		
+	setCop( (y<<8) | 1 ,0);
+	setCop(COLOR01,backrgb);
+	setCop(0xFFFF,0xFFFE);
+}
+
+void closeDown()
+{
+	if (win) CloseWindow(win);
+}
+
 int main_prog()
 {
 
@@ -77,83 +82,40 @@ int main_prog()
 	{
 		ULONG backrgb;
 		int i;
-		int linestart=screen -> BarHeight+1;
-		int lines=screen -> Height-linestart;
-		int width=screen -> Width;
+		int linestart = 0;
+		int width = win -> Width;
+		int height = win -> Height;
 		
-		show_screen( screen );
-		show_win(window);
-
-		viewport=ViewPortAddress(window);
-		struct RastPort *rport=window -> RPort;
-		backrgb = ((ULONG *) viewport -> ColorMap -> ColorTable)[0];
+		struct RastPort *rport=win -> RPort;
 
 		if (rport)
 		{
 			if (rport -> BitMap)
 			{
 				SetAPen(rport,1);
-				RectFill(rport,width/2,linestart,width-1,screen -> Height-1);
+				RectFill(rport,width/2,linestart,width-1,win -> Height-1);
 
 				SetAPen(rport,1);
-				RectFill(rport,0,linestart,width/2,screen -> Height-1);
+				RectFill(rport,0,linestart,width/2,win -> Height-1);
 
-				Box(rport,0,linestart,width-1,screen -> Height-1,2);
+//				Box(rport,0,linestart,width-1,win -> Height-1,2);
 
 				SetAPen(rport,3);
 				SetBPen(rport,2);
 
-				Move(rport,20,50);
-				Text(rport,txt,strlen(txt));
+//				Move(rport,20,50);
+//				Text(rport,txt,strlen(txt));
 			}
 		}
 
-#if 1
 		
-	// 5 instructions per line, and 3 extra at the end.
-		
-		CINIT(myucoplist,(lines*5) + 3 );
-		
-		for (i=linestart;i<lines;i++)
-		{
-			CWAIT(myucoplist,i,0);
-			CMOVEA(myucoplist,BPLCON3,0);
-			CMOVEA(myucoplist,COLOR(1),(i-linestart) & 0xFFF);
-			CMOVEA(myucoplist,BPLCON3,0x200);
-			CMOVEA(myucoplist,COLOR(3),(0xFFF-i) & 0xFFF);
-		}
-		
-		CWAIT(myucoplist,i,0);
-		CMOVEA(myucoplist,COLOR(1),backrgb);
-		CEND(myucoplist);
+		init_copper( linestart,  height );
 
-		Forbid();
-		viewport -> UCopIns=myucoplist;
-		Permit();
 
-		if (viewport -> UCopIns)
-		{
-			struct CopList  *cl;
-			struct CopIns *c;
+		render_copper( copperList ,win -> RPort );
 
-			dumpUCopList( viewport -> UCopIns );
-
-			cl = viewport -> UCopIns -> FirstCopList;
-			if ( cl )
-			{
-				dumpCopList( cl );
-
-				c = cl -> CopIns;
-				dumpCopIns( c, cl -> Count );
-			}
-		}
-#endif
-
-#if 0
-		RethinkDisplay();
-#endif
-
-		WaitLeftMouse(window);
+//		WaitLeftMouse(win);
+		getchar();
 
 	}
 	else
