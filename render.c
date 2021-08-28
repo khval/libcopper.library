@@ -9,6 +9,7 @@
 #include <proto/intuition.h>
 #include <proto/graphics.h>
 
+#include "planes.h"
 #include "render.h"
 
 uint32 copperList[2000];
@@ -30,14 +31,15 @@ uint32 diwstart, diwstop, ddfstart, ddfstop;
 uint32 beam_clock = 0;
 union cop *ptr;
 
-#define display_wx	0
+#define display_bx 0x79
+#define display_wx ((display_bx-8)/2)
 #define display_y 0
 
 extern unsigned char *bp0ptr,*bp1ptr,*bp2ptr,*bp3ptr,*bp4ptr,*bp5ptr,*bp6ptr,*bp7ptr;
 
 struct RastPort *copper_rp = NULL;
 
-// ddfstart = ddfstop - (8 *(wc-1))
+// ddfstart = ddfstop - (9 *(wc-1))
 // -------------------
 
 int WordCountToDispDataFetchStop( int hires, int ddstart, int wc )
@@ -117,7 +119,7 @@ void init_ecs2colors()
 
 uint16 hires,planes,ham,lace;
 
-uint64 (*planar_routine) (uint32 *data)=NULL;
+uint64 (*planar_routine) (uint32 *data)=convert_none;
 
 extern void *planar_routines[];
 
@@ -136,7 +138,7 @@ uint32 clock_speed;
 
 void update_display_offsets()
 {
-	display_offset_x = (ddf_mix - display_wx) * 32 - ddf_mix * 32;
+	display_offset_x = (ddf_mix - display_wx) * 4 ;
 
 	if (hires)
 	{
@@ -253,8 +255,10 @@ int datafetch = 0;
 
 bool check16( int x,int y )
 {
-	int miy = (diwstart >> 8);
-	int may = (diwstop >> 8) + 0x100;
+	int miy = (diwstart >> 9);
+	int may = (diwstop >> 9) + 0x100;
+
+//	printf("%d>=%d<%d\n", miy,y,may);
 
 	if ((y>=miy) && (y<may))
 	{
@@ -273,25 +277,91 @@ void convert16( char *data)
 	planar_routine( (uint32 *) (data + 8) );
 }
 
-void plot4( int x, int y, char *data )
+void plot4_scale1( int x, int y, char *data )
 {
-	printf("%s(%d,%d,%08lx)\n",__FUNCTION__,x,y,data);
-
+	WritePixelColor(copper_rp,x++,y,color[ *data ++ ]);
+	WritePixelColor(copper_rp,x++,y,color[ *data ++ ]);
+	WritePixelColor(copper_rp,x++,y,color[ *data ++ ]);
 	WritePixelColor(copper_rp,x,y,color[ *data ++ ]);
-	WritePixelColor(copper_rp,x+=display_scale_x,y,color[ *data ++ ]);
-	WritePixelColor(copper_rp,x+=display_scale_x,y,color[ *data ++ ]);
-	WritePixelColor(copper_rp,x+=display_scale_x,y,color[ *data ++ ]);
 }
 
-void plot4_color0( int x, int y, char *data )
+void plot4_scale2( int x, int y, char *data )
+{
+	WritePixelColor(copper_rp,x++,y,color[ *data ]);			// 0
+	WritePixelColor(copper_rp,x++,y,color[ *data ++ ]);
+	WritePixelColor(copper_rp,x++,y,color[ *data ]);		// 1
+	WritePixelColor(copper_rp,x++,y,color[ *data ++ ]);
+	WritePixelColor(copper_rp,x++,y,color[ *data ]);		// 2
+	WritePixelColor(copper_rp,x++,y,color[ *data ++ ]);
+	WritePixelColor(copper_rp,x++,y,color[ *data ]);		// 3
+	WritePixelColor(copper_rp,x,y,color[ *data ++ ]);
+}
+
+
+void plot4_color0_scale1( int x, int y, char *data )
 {
 	uint32 color0 = color[0];
+	WritePixelColor(copper_rp,x++,y,color0);
+	WritePixelColor(copper_rp,x++,y,color0);
+	WritePixelColor(copper_rp,x++,y,color0);
 	WritePixelColor(copper_rp,x,y,color0);
-	WritePixelColor(copper_rp,x+=display_scale_x,y,color0);
-	WritePixelColor(copper_rp,x+=display_scale_x,y,color0);
-	WritePixelColor(copper_rp,x+=display_scale_x,y,color0);
+}
 
-//	printf("%d,%d - %08x\n",x,y, color0);
+APTR _ba;
+ULONG _bpr;
+
+struct TagItem stdBMLock[] =
+	{
+		{LBM_BaseAddress, &_ba },
+		{LBM_BytesPerRow, &_bpr},
+		{TAG_END}
+	};
+
+void plot4_color0_scale2( int x, int y, char *data )
+{
+	uint32 color0 = color[0];
+
+#if 0
+	struct BitMap *bm = copper_rp -> BitMap;
+
+	APTR lock;
+	uint32 *ptr;
+	int w;
+
+	w = GetBitMapAttr( bm , BMA_ACTUALWIDTH);
+	
+	if ((y>0) && (y < bm -> Rows))
+	{
+		lock = LockBitMapTagList( bm, stdBMLock );
+		if (lock)
+		{
+			if (x<w-4)
+			{
+				ptr = (uint32 *)  ((char *) _ba + (y * _bpr)) + x;
+
+				*ptr++ = color0;
+				*ptr++ = color0;
+				*ptr++ = color0;
+				*ptr++ = color0;
+				*ptr++ = color0;
+				*ptr++ = color0;
+				*ptr++ = color0;
+				*ptr++ = color0;
+			}
+
+			UnlockBitMap(lock);
+		}
+	}
+#else
+	WritePixelColor(copper_rp,x++,y,color0);
+	WritePixelColor(copper_rp,x++,y,color0);
+	WritePixelColor(copper_rp,x++,y,color0);
+	WritePixelColor(copper_rp,x++,y,color0);
+	WritePixelColor(copper_rp,x++,y,color0);
+	WritePixelColor(copper_rp,x++,y,color0);
+	WritePixelColor(copper_rp,x++,y,color0);
+	WritePixelColor(copper_rp,x,y,color0);
+#endif
 }
 
 void (*plot4_fn)( int x, int y, char *data ) = NULL;
@@ -376,26 +446,29 @@ void render_DisplayWindow(struct RastPort *rp)
 	int r;
 	SetAPen(rp,1);
 
-	printf("from %08x,%08x to %08x,%08x, dx %d dy %d\n",
-		dispwindow.x0,dispwindow.y0,dispwindow.x1,dispwindow.y1, 
-			(dispwindow.x1 - dispwindow.x0) * 8,
-			dispwindow.y1 - dispwindow.y0);
+	printf("from %08x,%08x to %08x,%08x, dx %d bytes, dy %d\n",
+		dispwindow.x0,dispwindow.y0,
+		dispwindow.x1,dispwindow.y1, 
+		(dispwindow.x1 - dispwindow.x0+1),
+		(dispwindow.y1 - dispwindow.y0+1));
 
 	x0 = (dispwindow.x0 - 0x79) * 8;
 	x1 = (dispwindow.x1 - 0x79) * 8;
 
 	for (r=-2;r<2;r++)
-		box(rp,x0+r,dispwindow.y0+r,x1+r,dispwindow.y1+r);
+		box(rp,x0+r,dispwindow.y0+r,x1-r,dispwindow.y1-r);
 }
 
 void render_copper(uint32 *copperList, struct RastPort *rp)
 {
 	int lx;
-	int x,y;
+	int x=0,y=0;
 	uint32 off;
 	char data[16];
 	bool beam_wait = false;
 	int to_draw_count = 0;
+	int draw_x,draw_y;
+	bool wtf = false;
 
 	copper_rp = rp;
 
@@ -412,9 +485,16 @@ void render_copper(uint32 *copperList, struct RastPort *rp)
 
 	update_display_offsets();
 
+	beam_clock = 0;	// reset beam
+
 	for (;ptr -> d32 != 0xFFFFFFFE;ptr++)
 	{
-		printf("%-8d, %04x,%04x -- %08x\n",ptr - (union cop *) copperList, ptr -> d16.a,ptr -> d16.b,beam_clock);
+		if (wtf)
+			printf("%-8d, %04x,%04x -- %d,%d\n",
+				ptr - (union cop *) copperList, 
+				ptr -> d16.a,
+				ptr -> d16.b,
+				x,y);
 
 		switch (ptr -> d32 & 0x00010001)
 		{
@@ -438,7 +518,7 @@ void render_copper(uint32 *copperList, struct RastPort *rp)
 
 					while (to_draw_count -- )
 					{
-						plot4_fn( display_offset_x + (x*display_chunk16_offset) + (off * display_chunk_offset) ,  (y-display_y)*display_scale_y, data + (off * pixels_per_chunk) );
+						plot4_fn( draw_x + (off * display_chunk_offset) ,  draw_y, data + (off * pixels_per_chunk) );
 						off ++;
 					}
 				}
@@ -448,21 +528,46 @@ void render_copper(uint32 *copperList, struct RastPort *rp)
 				beam_wordpos  = beam_clock >> 2;		// 4 copper commands per 16pixels.
 				lx =x;
 				x = beam_wordpos & 0xFF;
-				y = beam_wordpos >> 8;
 
 				if ( lx - x ) 
 				{
+					ly = y;
+					y = (beam_wordpos >> 8) ;
+					if (ly-y) 
+					{
+						if (y>286) 
+						{
+							printf("trying to get unstuck!\n");
+							break;
+						}
+						draw_y = (y-display_y)*display_scale_y;
+					}
+
 					if (check16(x,y) == false)
 					{
-						plot4_fn = plot4_color0;
+						switch (display_scale_x)
+						{
+							case 1: plot4_fn = plot4_color0_scale1; break;
+							case 2: plot4_fn = plot4_color0_scale2; break;
+						}
 					}
 					else
 					{
 						convert16( data );
-						plot4_fn = plot4;
+
+						switch (display_scale_x)
+						{
+							case 1: plot4_fn = plot4_scale1; break;
+							case 2: plot4_fn = plot4_scale2; break;
+						}
 					}
 
-					to_draw_count = 4;
+					draw_x = display_offset_x + (x*display_chunk16_offset);
+
+					if (draw_x< 640+64) 
+						to_draw_count = 4;
+					else
+						to_draw_count = 0;
 				}
 			}
 
@@ -474,7 +579,7 @@ void render_copper(uint32 *copperList, struct RastPort *rp)
 			{
 				beam_clock+=clock_speed;
 				to_draw_count -- ;
-				plot4_fn( display_offset_x + (x*display_chunk16_offset) + (off * display_chunk_offset) ,  (y-display_y)*display_scale_y, data + (off * pixels_per_chunk) );
+				plot4_fn( draw_x + (off * display_chunk_offset), draw_y, data + (off * pixels_per_chunk) );
 				off ++;
 			}
 			else 
@@ -483,21 +588,47 @@ void render_copper(uint32 *copperList, struct RastPort *rp)
 			beam_wordpos  = beam_clock >> 2;		// 4 copper commands per 16pixels.
 			lx =x;
 			x = beam_wordpos & 0xFF;
-			y = beam_wordpos >> 8;
 
 			if ( lx - x ) 
 			{
+				ly = y;
+				y = (beam_wordpos >> 8) ;
+				if (ly-y) 
+				{
+					if (y>286)
+					{
+						wtf=true;
+						printf("trying to get unstuck!\n");
+						break;
+					}
+
+					draw_y = (y-display_y)*display_scale_y;
+				}
+
 				if (check16(x,y) == false)
 				{
-					plot4_fn = plot4_color0;
+					switch (display_scale_x)
+					{
+						case 1: plot4_fn = plot4_color0_scale1; break;
+						case 2: plot4_fn = plot4_color0_scale2; break;
+					}
 				}
 				else
 				{
 					convert16( data );
-					plot4_fn = plot4;
+					switch (display_scale_x)
+					{
+						case 1: plot4_fn = plot4_scale1; break;
+						case 2: plot4_fn = plot4_scale2; break;
+					}
 				}
 
-				to_draw_count = 4;
+				draw_x = display_offset_x + (x*display_chunk16_offset);
+
+				if (draw_x< 640+64) 
+					to_draw_count = 4;
+				else
+					to_draw_count = 0;
 			}
 		}
 	}
