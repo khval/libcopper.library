@@ -56,6 +56,7 @@ int main()
 		struct Window *win;
 
 		win = OpenWindowTags( NULL, 
+			WA_IDCMP,IDCMP_MOUSEBUTTONS,
 			WA_Left,320,
 			WA_Top,20,
 			WA_Width, 640,
@@ -85,7 +86,8 @@ int main()
 
 			printf("rows %d\n", (diwstopy & 0x80 ? diwstopy : diwstopy + 0x100) - diwstarty );
 
-			getchar();
+			WaitLeftMouse(win);
+//			getchar();
 
 			CloseWindow(win);
 		}

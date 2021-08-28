@@ -1,7 +1,10 @@
 // OSCopper.e
 // Native graphics example using OS friendly copperlist
-		
+
+#include <stdlib.h>
+#include <stdio.h>		
 #include <stdbool.h>
+#include <string.h>
 
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -141,7 +144,7 @@ void init_planes()
 
 	size = 320/8 * 200;
 
-	bitplane = (uint32) AllocVecTagList( size, tags_shared);
+	bitplane = (uint8 *) AllocVecTagList( size, tags_shared);
 
 	bzero(bitplane, size);
 
@@ -218,16 +221,13 @@ int main_prog()
 	
 		render_copper( copperList, win -> RPort );
 
-	
-//		WaitLeftMouse(win);
-
-
 		int wc = DispDataFetchWordCount( 0, ddfstart, ddfstop);
 
 		printf("data fetch start %d (pixels %d)\n",ddfstart,DispDataFetchWordCount( 0, 0,ddfstart)*16);
 		printf("data fetch word count %d (pixels %d)\n",wc,wc*16);
 
-		getchar();
+		WaitLeftMouse(win);
+//		getchar();
 	}
 	else
 	{

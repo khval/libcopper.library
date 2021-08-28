@@ -38,12 +38,12 @@ struct bar
 
 struct bar bars[] =
 {
-	{0x100,30,30,0.0f,0.01f},
+	{0x100,10,30,0.0f,-0.01f},
 	{0x010,40,30,0.0f,0.001f},
-	{0x001,30,30,0.0f,0.02f},
+	{0x001,20,30,0.0f,-0.02f},
 	{0x110,40,30,0.0f,0.002f},
-	{0x011,30,30,0.0f,0.03f},
-	{0x101,40,30,0.0f,0.003f}
+	{0x011,30,30,0.0f,-0.03f},
+	{0x101,15,30,0.0f,0.003f}
 };
 
 
@@ -53,7 +53,7 @@ bool initScreen()
 					WA_IDCMP,IDCMP_MOUSEBUTTONS,
 					WA_Left,640,
 					WA_Width,640+64,
-					WA_Height,400,
+					WA_Height,480+64,
 					WA_Flags,WFLG_NOCAREREFRESH |
 							WFLG_ACTIVATE,
 					TAG_END);
@@ -81,10 +81,14 @@ void moveBar( int hh)
 }
 
 
-void insideBar( int y, int *c, int *v )
+void insideBar( int y, int *c )
 {
+	int v;
 	int yy;
 	struct bar *b;
+
+	*c = 0;
+	v = 0;
 
 	for (b = bars; b < bars +(sizeof(bars)/sizeof(struct bar)); b++ )
 	{
@@ -93,14 +97,11 @@ void insideBar( int y, int *c, int *v )
 		if ((yy >= 0) && (yy < b -> h ))
 		{
 			yy -= (b->h /2);
-			*v= 255 - (abs(yy) * abs(yy));
-			if (*v<0) *v = 0;
-			*c = b -> c;
-			return;
+			v = 255 - (abs(yy) * abs(yy));
+			if (v<0) v = 0;
+			*c |= b -> c * ( v >> 4); // set color, illuminate
 		}
 	}
-	*c = 0;
-	*v = 0;
 }
 
 void updateCop( uint32 *cops, int lines )
@@ -117,10 +118,10 @@ void updateCop( uint32 *cops, int lines )
 	{
 		cop = (cops + (y*segSize)) ;
 
-		insideBar( y, &c, &v );
+		insideBar( y, &c );
 
 		w = (uint16 *) (cop + offset1);
-		w[1] = c * (v >> 4);	// set high R colors.
+		w[1] = c ;	
 	}
 }
 
