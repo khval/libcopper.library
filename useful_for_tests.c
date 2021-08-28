@@ -38,13 +38,18 @@ void WaitLeftMouse(struct Window *win)
 	bool running = true;
 	struct IntuiMessage *msg;
 	ULONG class, code;
-	ULONG win_mask = 1 << win -> UserPort ->mp_SigBit ;
-	
- 	do
-	{
-		ULONG sig = Wait( win_mask | SIGBREAKF_CTRL_C);
-		if (sig & win_mask) if (checkMouse(win, 1)) running = false;
 
-	} while (running);
+	if (win -> UserPort)
+	{
+		ULONG win_mask = 1 << win -> UserPort ->mp_SigBit ;
+	
+ 		do
+		{
+			ULONG sig = Wait( win_mask | SIGBREAKF_CTRL_C);
+			if (sig & win_mask) if (checkMouse(win, 1)) running = false;
+
+		} while (running);
+	}
+	else printf("no user port for wait left mouse\n");
 }
 
