@@ -22,6 +22,13 @@
 
 #include "render.h"
 
+#ifdef __amigaos4__
+struct Custom _custom;
+struct Custom *custom = &_custom;	// store locally... handle things with do_functions();
+#else
+struct Custom *custom = 0xDFF000;
+#endif
+
 struct RastPort *rport;
 
 int i;
@@ -93,7 +100,7 @@ int main_prog()
 		draw_bitamp();
 	
 		dump_copper( copperList );
-		render_copper( copperList , win -> RPort );
+		render_copper( custom, copperList , win -> RPort );
 
 		WaitLeftMouse(win);
 //		getchar();

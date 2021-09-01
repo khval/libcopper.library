@@ -8,10 +8,18 @@
 #include <proto/exec.h>
 #include <proto/intuition.h>
 #include <proto/graphics.h>
+#include <hardware/custom.h>
 
 // se page 28 in the hardware ref manual
 
 #include "render.h"
+
+#ifdef __amigaos4__
+struct Custom _custom;
+struct Custom *custom = &_custom;	// store locally... handle things with do_functions();
+#else
+struct Custom *custom = 0xDFF000;
+#endif
 
 uint32 plane1 = 0;
 uint32 plane2 = 0;
@@ -81,8 +89,8 @@ void init_planes()
 	plane1 = (uint32) AllocVecTagList( size, tags_shared);
 	plane2 = (uint32) AllocVecTagList( size, tags_shared);
 
-	bzero(plane1, size);
-	bzero(plane2, size);
+	bzero( (void *) plane1, size);
+	bzero( (void *) plane2, size);
 
 	gfx_bm = (struct BitMap *) AllocVecTagList( sizeof(struct BitMap), tags_shared);
 
@@ -122,6 +130,7 @@ int main()
 		if ((plane1) && (plane2))
 		{
 			win = OpenWindowTags( NULL, 
+				WA_IDCMP,IDCMP_MOUSEBUTTONS,
 				WA_Left,320,
 				WA_Top,20,
 				WA_Width, 640+64,
@@ -133,8 +142,6 @@ int main()
 		{
 			struct BitMap bm;
 
-			copper_rp = win -> RPort;
-
 			cop_move_(DIWSTART,0x2081);
 			cop_move_(DIWSTOP,0xF4C1);
 
@@ -144,7 +151,7 @@ int main()
 			int wc = DispDataFetchWordCount( 0, ddfstart, ddfstop);
 
 			init_copper_list();
-			render_copper( copperList, copper_rp );
+			render_copper( custom, copperList,  win -> RPort );
 
 			printf("data fetch start %d (pixels %d)\n",ddfstart,DispDataFetchWordCount(0, 0,ddfstart)*16);
 			printf("data fetch word count %d (pixels %d)\n",wc,wc*16);

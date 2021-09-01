@@ -25,6 +25,7 @@ elf_files += tests/copperbar.c
 elf_files += tests/CopperCheck.c
 elf_files += tests/CopperSplit.c
 elf_files += tests/OSCopper.c
+elf_files += tests/copperTest.c
 
 elf_files_elf = ${elf_files:.c=.elf}
 

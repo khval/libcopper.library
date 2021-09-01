@@ -24,7 +24,13 @@
 
 #include "render.h"
 
-//struct RastPort *rport;
+#ifdef __amigaos4__
+struct Custom _custom;
+struct Custom *custom = &_custom;	// store locally... handle things with do_functions();
+#else
+struct Custom *custom = 0xDFF000;
+#endif
+
 
 #define CMOVEA(c,a,b) { CMove(c,a,b);CBump(c); }
 
@@ -51,8 +57,8 @@ bool initScreen()
 			WA_Flags,WFLG_NOCAREREFRESH |
 					WFLG_ACTIVATE,
 			WA_Left,640,
-			WA_Top,20,
-			WA_Width,640+64,
+			WA_Top,20 ,
+			WA_Width,640+128,
 			WA_Height,480,
 
 			TAG_END);
@@ -165,6 +171,16 @@ void init_planes()
 	Move(&gfx_rp,0,0);
 	Draw(&gfx_rp,320,200);
 
+	Move(&gfx_rp,0,0);
+	Draw(&gfx_rp,0,200);
+
+	Move(&gfx_rp,320/2,0);
+	Draw(&gfx_rp,320/2,200);
+
+	Move(&gfx_rp,320-1,0);
+	Draw(&gfx_rp,320-1,200);
+
+
 }
 
 void old_code()
@@ -219,7 +235,7 @@ int main_prog()
 		init_planes();
 		init_copper( 320,200, 0,win->Height);
 	
-		render_copper( copperList, win -> RPort );
+		render_copper( custom, copperList, win -> RPort );
 
 		int wc = DispDataFetchWordCount( 0, ddfstart, ddfstop);
 

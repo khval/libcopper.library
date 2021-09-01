@@ -28,7 +28,7 @@ struct Custom *custom = &_custom;	// store locally... handle things with do_func
 struct Custom *custom = 0xDFF000;
 #endif
 
-		struct Window *win;
+struct Window *win;
 
 //Programmé par Yragael pour Stash of Code (http://www.stashofcode.fr) en 2017.
 //Cette œuvre est mise à disposition selon les termes de la Licence Creative Commons Attribution - Pas d’Utilisation Commerciale - Partage dans les Mêmes Conditions 4.0 France.

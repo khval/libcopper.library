@@ -22,8 +22,14 @@
 #include	<exec/memory.h>
 
 #include "common.h"
-
 #include "render.h"
+
+#ifdef __amigaos4__
+struct Custom _custom;
+struct Custom *custom = &_custom;	// store locally... handle things with do_functions();
+#else
+struct Custom *custom = 0xDFF000;
+#endif
 
 struct Window *win;
 
@@ -166,8 +172,6 @@ int main_prog()
 		int lines=win -> Height;
 		int width=win -> Width;
 		
-		copper_rp=win -> RPort;
-
 		init_ecs2colors();
 		init_copper(linestart, win -> Height);
 
@@ -179,7 +183,7 @@ int main_prog()
 
 
 //			dump_copper( copperList );
-			render_copper( copperList, copper_rp );
+			render_copper( custom, copperList, win -> RPort );
 
          		/* Check & clear CTRL_C signal */
 			if(SetSignal(0L,SIGBREAKF_CTRL_C) & SIGBREAKF_CTRL_C)
