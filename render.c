@@ -249,6 +249,8 @@ void cop_move(union cop data)
 					printf( "planes %d\n", planes );
 
 					planar_routine = planar_routines[ planes ];
+					move_routine = move_routines[ planes ];
+
 					update_display_offsets();
 					break;
 
@@ -284,6 +286,12 @@ void convert16( char *data)
 {
 	planar_routine( (uint32 *) data );
 	planar_routine( (uint32 *) (data + 8) );
+}
+
+void move16()
+{
+	move_routine();
+	move_routine();
 }
 
 void plot4_scale1( int x, int y, char *data )
