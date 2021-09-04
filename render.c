@@ -221,12 +221,12 @@ void cop_move(union cop data)
 	{
 		case INTREQ:	break;
 		case DIWSTART: diwstart = data.d16.b; 
-					dispwindow.y0 = diwstart>>9 ;
+					dispwindow.y0 = diwstart>>8 ;
 					dispwindow.x0 = (diwstart & 0xFF) >> 1 ;
 					break;
 
 		case DIWSTOP: diwstop = data.d16.b; 
-					dispwindow.y1 = (diwstop & 0x8000 ? (diwstop >> 9) : (diwstop >> 9)) + 256;
+					dispwindow.y1 = (diwstop & 0x8000 ? (diwstop >> 8) : (diwstop >> 8) + 0x100 ) ;
 
 					dispwindow.x1 = ((diwstop & 0x80 ? (diwstop & 0xFF)  : (diwstop & 0xFF)) >> 1) + 256;
 					break;
