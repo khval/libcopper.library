@@ -269,7 +269,6 @@ bool check16( int x,int y )
 	int miy = (diwstart >> 9);
 	int may = (diwstop >> 9) + 0x100;
 
-//	printf("%d>=%d<%d\n", miy,y,may);
 
 	if ((y>=miy) && (y<may))
 	{
@@ -280,7 +279,6 @@ bool check16( int x,int y )
 	}
 	return false;
 }
-
 
 void convert16( char *data)
 {
@@ -413,7 +411,6 @@ void inc_clock(int n)
 			offset = 0;
 		}
 		beam_wordpos = (beam_y << 8) | ((beam_x & 0x7F) << 1);
-		printf("bream_wordpos: %08x -- %d,%d\n", beam_wordpos, beam_x,beam_y);
 	}
 }
 
@@ -435,10 +432,10 @@ void dump_copper(uint32 *copperList)
 			case 0x00010001:	cmd = "Skip" ; break;
 		}
 
-		printf("%-8s: %04x,%04x\n", cmd, ptr -> d16.a , ptr -> d16.b ); 
+//		printf("%-8s: %04x,%04x\n", cmd, ptr -> d16.a , ptr -> d16.b ); 
 	}
 
-	printf("%-8s: %04x,%04x\n", "END",  0xFFFF , 0xFFFE ); 
+//	printf("%-8s: %04x,%04x\n", "END",  0xFFFF , 0xFFFE ); 
 }
 
 static void box(struct RastPort *rp,int x0,int y0,int x1,int y1)
