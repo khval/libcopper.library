@@ -505,12 +505,62 @@ void draw_( int draw_x, int draw_y, char *data)
 		inc_clock(clock_speed);
 }
 
+static char data[16];
+static int draw_x,draw_y;
+
+void __render()
+{
+			if (to_draw_count)
+			{
+				to_draw_count -- ;
+				plot4_fn( draw_x + (offset * display_chunk_offset), draw_y, data + (offset * pixels_per_chunk) );
+				offset ++;
+				inc_clock(clock_speed);
+			}
+			else 
+				inc_clock(clock_speed);
+
+			if ( lbeam_x - beam_x ) 
+			{
+
+				if (lbeam_y - beam_y) draw_y = (beam_y-display_y)*display_scale_y;
+
+				if (check16(beam_x,beam_y) == false)
+				{
+					plot4_fn = plot4_color0_fn;
+				}
+				else
+				{
+					if (displayed(beam_x,beam_y))
+					{
+						convert16( data );
+						plot4_fn = plot4_bitmap_fn;
+					}
+					else
+					{
+						move16();
+						plot4_fn = plot4_color0_fn;
+					}
+				}
+
+				if (draw_x< 640+64) 
+				{
+					to_draw_count = 4;
+				}
+				else
+				{
+					to_draw_count = 0;
+				}
+
+				draw_x = display_offset_x + (beam_x*display_chunk16_offset);
+				offset = 0;
+			}
+}
+
 void render_copper(struct Custom *custom, uint32 *copperList, struct RastPort *rp)
 {
 	char ck = '*';
-	char data[16];
 	bool beam_wait = false;
-	int draw_x,draw_y;
 	bool wtf = false;
 
 	copper_rp = rp;
@@ -531,18 +581,13 @@ void render_copper(struct Custom *custom, uint32 *copperList, struct RastPort *r
 	beam_clock = 0;	// reset beam
 	beam_x = 0;
 	beam_y = 0;
+	beam_wordpos = 0;
 
-//	wtf = true;
+	wait_beam_enable = 0;
+	wait_beam = 0;
 
 	for (;;)
 	{
-		if (wtf)
-			printf("%-8d, %04x,%04x -- %d,%d\n",
-				ptr - (union cop *) copperList, 
-				ptr -> d16.a,
-				ptr -> d16.b,
-				beam_x,beam_y);
-
 		switch (ptr -> d32 & 0x00010001)
 		{
 			case 0x00000000:
@@ -551,61 +596,21 @@ void render_copper(struct Custom *custom, uint32 *copperList, struct RastPort *r
 			case 0x00010001:	cop_skip( *ptr); break;
 		}
 
-
 		do
 		{
-			if (to_draw_count)
-			{
-				to_draw_count -- ;
-				plot4_fn( draw_x + (offset * display_chunk_offset), draw_y, data + (offset * pixels_per_chunk) );
-				offset ++;
-				inc_clock(clock_speed);
-			}
-			else 
-				inc_clock(clock_speed);
+			__render();
+		} while ((beam_wordpos & wait_beam_enable) < wait_beam);
 
-			if ( lbeam_x - beam_x ) 
-			{
-				if (lbeam_y - beam_y) 
-				{
-					if (beam_y>286)
-					{
-						wtf=true;
-						printf("trying to get unstuck!\n");
-						break;
-					}
+		if ((beam_wordpos & wait_beam_enable) == wait_beam)
+		{
+			__render();
+		}
 
-					draw_y = (beam_y-display_y)*display_scale_y;
-				}
-
-				if (draw_x< 640+64) 
-				{
-					if (check16(beam_x,beam_y) == false)
-					{
-						plot4_fn = plot4_color0_fn;
-					}
-					else
-					{
-						convert16( data );
-						plot4_fn = plot4_bitmap_fn;
-					}
-
-					to_draw_count = 4;
-				}
-				else
-				{
-					to_draw_count = 0;
-				}
-
-				draw_x = display_offset_x + (beam_x*display_chunk16_offset);
-				offset = 0;
-			}
-		} while ((beam_wordpos & wait_beam_enable) <= wait_beam);
+		Printf("Beam_y %04lx --- beam_wordpos %08lx\n",beam_y, beam_wordpos);
+		Delay(5);
 
 		if (ptr -> d32 == 0xFFFFFFFE) break;
 		ptr ++;
-
-//		getchar();
 	}
 
 	render_DisplayWindow(rp);
