@@ -148,3 +148,27 @@ void *planar_routines[]  =
 	convert_8p
 };
 
+void move_none() {};
+void move_1p() { bp0ptr ++; }
+void move_2p() { bp0ptr ++; bp1ptr ++; }
+void move_3p() { bp0ptr ++; bp1ptr ++; bp2ptr ++; }
+void move_4p() { bp0ptr ++; bp1ptr ++; bp2ptr ++; bp3ptr ++; }
+void move_5p() { bp0ptr ++; bp1ptr ++; bp2ptr ++; bp3ptr ++; bp4ptr ++; }
+void move_6p() { bp0ptr ++; bp1ptr ++; bp2ptr ++; bp3ptr ++; bp4ptr ++; bp5ptr ++; }
+void move_7p() { bp0ptr ++; bp1ptr ++; bp2ptr ++; bp3ptr ++; bp4ptr ++; bp5ptr ++; bp6ptr ++;}
+void move_8p() { bp0ptr ++; bp1ptr ++; bp2ptr ++; bp3ptr ++; bp4ptr ++; bp5ptr ++; bp6ptr ++; bp7ptr ++;}
+
+void *move_routines[]  =
+{
+	move_none,
+	move_1p,
+	move_2p,
+	move_3p,
+	move_4p,
+	move_5p,
+	move_6p,
+	move_7p,
+	move_8p
+};
+
+
