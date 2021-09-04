@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include <proto/exec.h>
+#include <proto/dos.h>
 #include <proto/intuition.h>
 #include <proto/graphics.h>
 
@@ -33,8 +34,8 @@ uint16 beam_wordpos = 0;
 
 union cop *ptr;
 
-#define display_bx 0x0
-#define display_wx ((display_bx-8)/2)
+#define display_bx 0x81
+#define display_wx ((display_bx-4)/2)
 #define display_y 0
 
 extern unsigned char *bp0ptr,*bp1ptr,*bp2ptr,*bp3ptr,*bp4ptr,*bp5ptr,*bp6ptr,*bp7ptr;
@@ -125,6 +126,9 @@ void plot4_color0_scale2( int x, int y, char *data );
 void plot4_scale1( int x, int y, char *data );
 void plot4_scale2( int x, int y, char *data );
 
+uint32 mi_disp = 0x40;
+uint32 ma_disp = 0x80;
+
 void update_display_offsets()
 {
 	display_offset_x = (ddf_mix - display_wx) * 4 ;
@@ -170,9 +174,20 @@ void update_display_offsets()
 		}
 	}
 
+	mi_disp = dispwindow.x0 / 2;
+	ma_disp = dispwindow.x1  /2 ;
+
 	display_chunk_offset = pixels_per_chunk  * display_scale_x;
 	display_chunk16_offset = 16 * display_scale_x;
 }
+
+bool displayed( int scanx, int scany )
+{
+//	return (( mi_disp <= scanx ) && ( scanx < ma_disp));
+
+	return true;
+}
+
 
 void update_ddf()
 {
@@ -268,11 +283,7 @@ int datafetch = 0;
 
 bool check16( int x,int y )
 {
-	int miy = (diwstart >> 9);
-	int may = (diwstop >> 9) + 0x100;
-
-
-	if ((y>=miy) && (y<may))
+	if ((dispwindow.y0<=y) && (y<dispwindow.y1))
 	{
 		if ((x>=ddf_mix) && (x<ddf_max))
 		{
@@ -418,7 +429,7 @@ void inc_clock(int n)
 			beam_y++;
 			offset = 0;
 		}
-		beam_wordpos = (beam_y << 8) | ((beam_x & 0x7F) << 1);
+		beam_wordpos = ( (beam_y & 0xFF) << 8) | ((beam_x & 0x7F) << 1);
 	}
 }
 
