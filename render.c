@@ -70,40 +70,6 @@ int DispDataFetchWordCount( int hires, int ddfstart, int ddfstop)
 	return ((ddfstop- ddfstart) / 4) +2 ;
 }
 
-
-void clu( int x, int y )
-{
-	printf("diwstart: %d,%d\n", x,y);
-
-	x = 20;
-	y *= 2;
-
-	printf(" %d,%d\n", x,y);
-
-	SetAPen(copper_rp,1);
-	x += 5; 	Move(copper_rp,x,y);
-	x -= 5;	Draw(copper_rp,x,y);
-	y += 5; 	Draw(copper_rp,x,y);
-}
-
-void crb(int y)
-{
-	int x;
-	int mix = diwstart & 0xFF;
-	int max = diwstop & 0xFF;
-
-	int wc = DispDataFetchWordCount( 0, mix, max);
-
-	x = wc*16 +20 ;
-
-	y *= 2;
-
-	SetAPen(copper_rp,1);
-	y -= 5; 	Move(copper_rp,x,y);
-	y += 5;	Draw(copper_rp,x,y);
-	x -= 5; 	Draw(copper_rp,x,y);
-}
-
 void init_ecs2colors()
 {
 	uint32 i;
