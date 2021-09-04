@@ -87,13 +87,25 @@ void init_ecs2colors()
 
 uint16 hires,planes,ham,lace;
 
-uint64 (*planar_routine) (uint32 *data)=convert_none;
+extern void move_none();
+
+uint64 (*planar_routine) (uint32 *data) = convert_none;
+void (*move_routine) () = move_none;
 
 extern void *planar_routines[];
+extern void *move_routines[];
 
 uint ddf_wc;
 uint ddf_mix;
 uint ddf_max;
+
+struct 
+{
+	uint32 x0;
+	uint32 y0;
+	uint32 x1;
+	uint32 y1;
+} dispwindow;
 
 uint32 display_offset_x ;
 uint32 display_scale_x ;
@@ -170,15 +182,6 @@ void update_ddf()
 	update_display_offsets();
 }
 
-struct 
-{
-	uint32 x0;
-	uint32 y0;
-	uint32 x1;
-	uint32 y1;
-} dispwindow;
-
-
 void cop_move(union cop data)
 {
 	printf("Cop_move %04x\n",data.d16.a);
@@ -189,12 +192,13 @@ void cop_move(union cop data)
 		case DIWSTART: diwstart = data.d16.b; 
 					dispwindow.y0 = diwstart>>8 ;
 					dispwindow.x0 = (diwstart & 0xFF) >> 1 ;
+					update_display_offsets();
 					break;
 
 		case DIWSTOP: diwstop = data.d16.b; 
 					dispwindow.y1 = (diwstop & 0x8000 ? (diwstop >> 8) : (diwstop >> 8) + 0x100 ) ;
-
-					dispwindow.x1 = ((diwstop & 0x80 ? (diwstop & 0xFF)  : (diwstop & 0xFF)) >> 1) + 256;
+					dispwindow.x1 = (diwstop & 0xFF) + 256;
+					update_display_offsets();
 					break;
 
 		case DDFSTART: ddfstart = data.d16.b; 
@@ -444,10 +448,13 @@ void render_DisplayWindow(struct RastPort *rp)
 	int r;
 	SetAPen(rp,1);
 
+	printf("display_bx: %d pixels\n",(display_bx+1)*8);
+	printf("DDFStart: %d pixels\n",((ddfstart & 0xFF)+9) *16);
+
 	printf("from %08x,%08x to %08x,%08x, dx %d bytes, dy %d\n",
 		dispwindow.x0,dispwindow.y0,
 		dispwindow.x1,dispwindow.y1, 
-		(dispwindow.x1 - dispwindow.x0+1),
+		(dispwindow.x1 - dispwindow.x0+1) / 8,
 		(dispwindow.y1 - dispwindow.y0+1));
 
 	x0 = dispwindow.x0 ;
@@ -456,14 +463,19 @@ void render_DisplayWindow(struct RastPort *rp)
 	y0 = dispwindow.y0 * 2;
 	y1 = dispwindow.y1 * 2;
 
-	x0 -= (display_bx/4) +1 ;
-	x1 -= (display_bx/4) +1 ;
+	x0 -= ((display_bx+43)/4) ;
+	x1 -= ((display_bx+43)/4) ;
 
 	x0 *= 2;
 	x1 *= 2;
 
 	for (r=-2;r<2;r++)
 		box(rp,x0+r,y0+r,x1-r,y1-r);
+
+	for (r=-2;r<2;r++)
+		box( rp, 
+			display_bx+r, display_bx+r, 
+			display_bx+10-r, display_bx+10-r );
 }
 
 	int to_draw_count = 0;
