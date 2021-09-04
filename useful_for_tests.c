@@ -8,9 +8,8 @@
 
 bool checkMouse(struct Window *win, ULONG bcode)
 {
-	BOOL ret = false;
+	BOOL buttonClicked = false;
 	struct IntuiMessage *msg;
-	ULONG code;
 	ULONG win_mask = 1 << win -> UserPort ->mp_SigBit ;
 	ULONG sig = Wait( win_mask | SIGBREAKF_CTRL_C);
 
@@ -23,14 +22,14 @@ bool checkMouse(struct Window *win, ULONG bcode)
 			switch (msg -> Class)
 			{
 				case IDCMP_MOUSEBUTTONS :
-						ret = msg -> Code == (( IECODE_LBUTTON -1 + bcode ) | IECODE_UP_PREFIX);
+						if ( msg -> Code == (( IECODE_LBUTTON -1 + bcode ) | IECODE_UP_PREFIX)) buttonClicked = true;
 						break;
 			}
 			ReplyMsg( (struct Message *) msg);
 		}
 	} while (msg);
 
-	return ret;
+	return buttonClicked;
 }
 
 void WaitLeftMouse(struct Window *win)
@@ -46,6 +45,7 @@ void WaitLeftMouse(struct Window *win)
  		do
 		{
 			ULONG sig = Wait( win_mask | SIGBREAKF_CTRL_C);
+			
 			if (sig & win_mask) if (checkMouse(win, 1)) running = false;
 
 		} while (running);
