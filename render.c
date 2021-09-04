@@ -377,6 +377,16 @@ void cop_wait(union cop data)
 {
 	printf("Cop_wait\n");
 
+	if (data.d32 == 0xFFFFFFFE)
+	{
+		if (beam_y >= 255)
+		{
+			wait_beam = (286 - 255) << 8 | 0xF4 ;
+			wait_beam_enable = 0xFFFE;
+			return;
+		}
+	}
+
 	wait_beam_enable = data.d16.b & 0xFFFE;
 
 	if (wait_beam_enable != 0)
