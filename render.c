@@ -331,7 +331,7 @@ void cop_move(union cop data)
 		case BPLCON1: 
 					// printf("BPLCON1\n");
 
-					s_odd = data.d16.b  & 0xF0;
+					s_odd = (data.d16.b  & 0xF0) >> 4;
 					s_even = data.d16.b  % 0x0F;
 
 					update_routines( planes );

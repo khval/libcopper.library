@@ -122,19 +122,11 @@ void _main_loop_()
 	ULONG sigs;
 	ULONG rsigs;
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
 	ULONG win_mask = 1 << win -> UserPort ->mp_SigBit ;
-
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 	inizio();
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
 	sigs = win_mask;
-
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 	do
 	{
@@ -249,8 +241,9 @@ void init_copper()
 	setCop( 0x10a,0 );		// Bpl2Mod
 
                                  // 5432109876543210
-//	setCop(0x100,B0011001000000000);	// bits 13 e 12 accesi!! (3 = %011)
-	setCop(0x100,B0001001000000000);	// bits 13 e 12 accesi!! (3 = %011)
+	setCop(0x100,B0011001000000000);	// bits 13 e 12 accesi!! (3 = %011)
+//	setCop(0x100,B0010001000000000);	// bits 13 e 12 accesi!! (3 = %011)
+//	setCop(0x100,B0001001000000000);	// bits 13 e 12 accesi!! (3 = %011)
 
 					// 3 bitplanes lowres, non lace
 

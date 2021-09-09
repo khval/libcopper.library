@@ -7,5 +7,5 @@ extern void *planar_shift_routines[];
 extern void *move_routines[];
 extern void initBits2Bytes();
 extern uint64 convert_none();
-extern void reset_copper_tmp()
+extern void reset_copper_tmp();
 
