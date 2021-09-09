@@ -133,8 +133,8 @@ int main()
 				WA_IDCMP,IDCMP_MOUSEBUTTONS,
 				WA_Left,320,
 				WA_Top,20,
-				WA_Width, 640+64,
-				WA_Height, 520,
+				WA_Width, 640+80,
+				WA_Height, 490,
 				TAG_END);
 		}
 
@@ -143,7 +143,7 @@ int main()
 			struct BitMap bm;
 
 			cop_move_(DIWSTART,0x2081);
-			cop_move_(DIWSTOP,0xF4C1);
+			cop_move_(DIWSTOP, ((199 + 0x20 ) << 8) | 0xC1);
 
 			cop_move_(DDFSTART,0x0038);
 			cop_move_(DDFSTOP,0x00D0);
