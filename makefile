@@ -15,6 +15,7 @@ incdir += -I../
 dependent_c_files += init.c 
 dependent_c_files += render.c 
 dependent_c_files += planes.c 
+dependent_c_files += planes_shift.c
 dependent_c_files += useful_for_tests.c
 
 dependent_files = ${dependent_c_files:.c=.o}
@@ -26,6 +27,7 @@ elf_files += tests/CopperCheck.c
 elf_files += tests/CopperSplit.c
 elf_files += tests/OSCopper.c
 elf_files += tests/copperTest.c
+elf_files += tests/ramjam/lezione5d2.c
 
 elf_files_elf = ${elf_files:.c=.elf}
 

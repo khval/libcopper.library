@@ -44,13 +44,15 @@ void initBits2Bytes()
 
 unsigned char *bp0ptr,*bp1ptr,*bp2ptr,*bp3ptr,*bp4ptr,*bp5ptr,*bp6ptr,*bp7ptr;
 
-void convert_1p(uint64 *data)
+static void convert_1p(uint64 *data)
 {
+//	printf("** bp0ptr %08x\n",bp0ptr);
+
 	*data = *((uint64 *) bits2bytes[*bp0ptr]);
 	bp0ptr++;
 }
 
-void convert_2p(uint64 *data)
+static void convert_2p(uint64 *data)
 {
 	*data =	*((uint64 *) bits2bytes0[*bp0ptr])
 		| *((uint64 *) bits2bytes1[*bp1ptr]);
@@ -58,7 +60,7 @@ void convert_2p(uint64 *data)
 	bp0ptr++;bp1ptr++;
 }
 
-void convert_3p(uint64 *data)
+static void convert_3p(uint64 *data)
 {
 	*data =	*((uint64 *) bits2bytes0[*bp0ptr])
 		| *((uint64 *) bits2bytes1[*bp1ptr]) 
@@ -67,7 +69,7 @@ void convert_3p(uint64 *data)
 	bp0ptr++;bp1ptr++;bp2ptr++;
 }
 
-void convert_4p(uint64 *data)
+static void convert_4p(uint64 *data)
 {
 	*data =	*((uint64 *) bits2bytes0[*bp0ptr])
 		| *((uint64 *) bits2bytes1[*bp1ptr]) 
@@ -77,7 +79,7 @@ void convert_4p(uint64 *data)
 	bp0ptr++;bp1ptr++;bp2ptr++;bp3ptr++;
 }
 
-void convert_5p(uint64 *data)
+static void convert_5p(uint64 *data)
 {
 	*data = *((uint64 *) bits2bytes0[*bp0ptr]) 
 		| *((uint64 *) bits2bytes1[*bp1ptr]) 
@@ -88,7 +90,7 @@ void convert_5p(uint64 *data)
 	bp0ptr++;bp1ptr++;bp2ptr++;bp3ptr++;bp4ptr++;
 }
 
-void convert_6p(uint64 *data)
+static void convert_6p(uint64 *data)
 {
 	*data = *((uint64 *) bits2bytes0[*bp0ptr])
 		| *((uint64 *) bits2bytes1[*bp1ptr]) 
@@ -100,7 +102,7 @@ void convert_6p(uint64 *data)
 	bp0ptr++;bp1ptr++;bp2ptr++;bp3ptr++;bp4ptr++;bp5ptr++;
 }
 
-void convert_7p(uint64 *data)
+static void convert_7p(uint64 *data)
 {
 	*data = *((uint64 *) bits2bytes0[*bp0ptr])
 		| *((uint64 *) bits2bytes1[*bp1ptr]) 
@@ -113,7 +115,7 @@ void convert_7p(uint64 *data)
 	bp0ptr++;bp1ptr++;bp2ptr++;bp3ptr++;bp4ptr++;bp5ptr++;bp6ptr++;
 }
 
-void convert_8p(uint64 *data)
+static void convert_8p(uint64 *data)
 {
 	*data = *((uint64 *) bits2bytes0[*bp0ptr])
 		|  *((uint64 *) bits2bytes1[*bp1ptr])
@@ -149,7 +151,7 @@ void *planar_routines[]  =
 };
 
 void move_none() {};
-void move_1p() { bp0ptr ++; }
+void move_1p() { 	printf("** bp0ptr %08x\n",bp0ptr); bp0ptr ++; }
 void move_2p() { bp0ptr ++; bp1ptr ++; }
 void move_3p() { bp0ptr ++; bp1ptr ++; bp2ptr ++; }
 void move_4p() { bp0ptr ++; bp1ptr ++; bp2ptr ++; bp3ptr ++; }
