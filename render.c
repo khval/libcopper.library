@@ -36,7 +36,7 @@ union cop *ptr;
 
 #define display_bx 0x81
 #define display_wx ((display_bx-4)/2)
-#define display_y 0
+#define display_y 10
 
 extern unsigned char *bp0ptr,*bp1ptr,*bp2ptr,*bp3ptr,*bp4ptr,*bp5ptr,*bp6ptr,*bp7ptr;
 
@@ -73,6 +73,9 @@ int DispDataFetchWordCount( int hires, int ddfstart, int ddfstop)
 
 void init_ecs2colors()
 {
+	s_odd = 0;
+	s_even = 0;
+
 	uint32 i;
 	for (i=0;i<0x10000;i++)
 	{
@@ -128,6 +131,13 @@ void plot4_scale2( int x, int y, char *data );
 
 uint32 mi_disp = 0x40;
 uint32 ma_disp = 0x80;
+
+uint32 wait_beam = 0x0000;
+uint32 wait_beam_enable = 0xFFFF;
+
+static uint32 offset;
+static uint32 lbeam_x,lbeam_y;
+static uint32 beam_x,beam_y;
 
 void update_display_offsets()
 {
@@ -197,16 +207,65 @@ void update_ddf()
 	update_display_offsets();
 }
 
+void 	update_routines( int planes )
+{
+	if (s_even | s_odd)
+	{
+		planar_routine = planar_shift_routines[ planes ];
+	}
+	else
+	{
+		planar_routine = planar_routines[ planes ];
+	}
+
+	move_routine = move_routines[ planes ];
+}
+
+
+void cop_wait(union cop data)
+{
+//	printf("Cop_wait\n");
+
+	if (data.d32 == 0xFFFFFFFE)
+	{
+		if (beam_y >= 255)
+		{
+			wait_beam = (286 - 255) << 8 | 0xF4 ;
+			wait_beam_enable = 0xFFFE;
+			return;
+		}
+	}
+
+	wait_beam_enable = data.d16.b & 0xFFFE;
+
+	if (wait_beam_enable != 0)
+	{
+		wait_beam = data.d16.a & wait_beam_enable;
+	}
+	else wait_beam_enable = wait_beam;
+}
+
+void cop_skip(union cop data)
+{
+	// wait d16.a. (VP, bit 15 to 8, HP bit 7 to 1)
+	if (beam_wordpos >= ((data.d16.a & 0xFFFE) >> 1)) ptr++;
+
+	// bit enable in d16.b
+	// bit 15 blitter finished 
+	// bit 14-8 VP, enable bits?
+	// bit 7-1, HP, enable bits?
+}
+
 void cop_move(union cop data)
 {
-	printf("Cop_move %04x\n",data.d16.a);
+//	printf("Cop_move Reg %04x, data %04x\n",data.d16.a,data.d16.b);
 
 	switch ( data.d16.a )
 	{
 		case INTREQ:	break;
 		case DIWSTART: diwstart = data.d16.b; 
 					dispwindow.y0 = diwstart>>8 ;
-					dispwindow.x0 = (diwstart & 0xFF) >> 1 ;
+					dispwindow.x0 = (diwstart & 0xFF)  ;
 					update_display_offsets();
 					break;
 
@@ -255,18 +314,27 @@ void cop_move(union cop data)
 		case BPL8PTL: setLow16(bp7,data.d16.b);	bp7ptr = (unsigned char *) bp7;	break;
 
 
-		case BPLCON0: printf("BPLCON0\n");
+		case BPLCON0:
+					// printf("BPLCON0\n");
+
 					hires = data.d16.b & 0x8000;
 					planes = (data.d16.b & 0x7000) >> 12;
 					ham = data.d16.b & (1<<11);
 					lace = data.d16.b & (1<<2);
 
-					printf( "planes %d\n", planes );
+					// printf( "planes %d\n", planes );
 
-					planar_routine = planar_routines[ planes ];
-					move_routine = move_routines[ planes ];
-
+					update_routines( planes );
 					update_display_offsets();
+					break;
+
+		case BPLCON1: 
+					// printf("BPLCON1\n");
+
+					s_odd = data.d16.b  & 0xF0;
+					s_even = data.d16.b  % 0x0F;
+
+					update_routines( planes );
 					break;
 
 		case COP1LCH: setHigh16(COP1LC,data.d16.b); break;
@@ -371,47 +439,6 @@ void cop_move_(uint16 reg, uint16 data)
 	cop_move( c );
 }
 
-void cop_skip(union cop data)
-{
-	// wait d16.a. (VP, bit 15 to 8, HP bit 7 to 1)
-	if (beam_wordpos >= ((data.d16.a & 0xFFFE) >> 1)) ptr++;
-
-	// bit enable in d16.b
-	// bit 15 blitter finished 
-	// bit 14-8 VP, enable bits?
-	// bit 7-1, HP, enable bits?
-}
-
-uint32 wait_beam = 0x0000;
-uint32 wait_beam_enable = 0xFFFF;
-
-static uint32 offset;
-static uint32 lbeam_x,lbeam_y;
-static uint32 beam_x,beam_y;
-
-
-void cop_wait(union cop data)
-{
-	printf("Cop_wait\n");
-
-	if (data.d32 == 0xFFFFFFFE)
-	{
-		if (beam_y >= 255)
-		{
-			wait_beam = (286 - 255) << 8 | 0xF4 ;
-			wait_beam_enable = 0xFFFE;
-			return;
-		}
-	}
-
-	wait_beam_enable = data.d16.b & 0xFFFE;
-
-	if (wait_beam_enable != 0)
-	{
-		wait_beam = data.d16.a & wait_beam_enable;
-	}
-	else wait_beam_enable = wait_beam;
-}
 
 void inc_clock(int n)
 {
@@ -428,6 +455,7 @@ void inc_clock(int n)
 			beam_x = 0;
 			beam_y++;
 			offset = 0;
+			reset_copper_tmp();
 		}
 		beam_wordpos = ( (beam_y & 0xFF) << 8) | ((beam_x & 0x7F) << 1);
 	}
@@ -483,25 +511,13 @@ void render_DisplayWindow(struct RastPort *rp)
 		(dispwindow.x1 - dispwindow.x0+1) / 8,
 		(dispwindow.y1 - dispwindow.y0+1));
 
-	x0 = dispwindow.x0 ;
-	x1 = dispwindow.x1 ;
+	x0 = (dispwindow.x0 - (display_bx - 20))*2;
+	x1 = (dispwindow.x1 - (display_bx - 20))*2;
+	y0 = (dispwindow.y0 - display_y) * 2;
+	y1 = (dispwindow.y1 - display_y) * 2;
 
-	y0 = dispwindow.y0 * 2;
-	y1 = dispwindow.y1 * 2;
+	for (r=0;r<1;r++) box(rp,x0+r,y0+r,x1-r,y1-r);
 
-	x0 -= ((display_bx+43)/4) ;
-	x1 -= ((display_bx+43)/4) ;
-
-	x0 *= 2;
-	x1 *= 2;
-
-	for (r=-2;r<2;r++)
-		box(rp,x0+r,y0+r,x1-r,y1-r);
-
-	for (r=-2;r<2;r++)
-		box( rp, 
-			display_bx+r, display_bx+r, 
-			display_bx+10-r, display_bx+10-r );
 }
 
 	int to_draw_count = 0;
@@ -623,7 +639,7 @@ void render_copper(struct Custom *custom, uint32 *copperList, struct RastPort *r
 		ptr ++;
 	}
 
-	render_DisplayWindow(rp);
+//	render_DisplayWindow(rp);
 }
 
 
