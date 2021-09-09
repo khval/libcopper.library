@@ -617,13 +617,7 @@ void render_copper(struct Custom *custom, uint32 *copperList, struct RastPort *r
 			__render();
 		} while ((beam_wordpos & wait_beam_enable) < wait_beam);
 
-		if ((beam_wordpos & wait_beam_enable) == wait_beam)
-		{
-			__render();
-		}
-
-		Printf("Beam_y %04lx --- beam_wordpos %08lx\n",beam_y, beam_wordpos);
-		Delay(5);
+//		Printf("Beam_y %04lx --- beam_wordpos %08lx\n",beam_y, beam_wordpos);
 
 		if (ptr -> d32 == 0xFFFFFFFE) break;
 		ptr ++;
