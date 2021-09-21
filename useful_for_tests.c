@@ -4,6 +4,22 @@
 #include <proto/dos.h>
 #include <proto/intuition.h>
 #include <proto/graphics.h>
+#include <proto/layers.h>
+
+struct XYSTW_Vertex3D { 
+	float x, y; 
+	float s, t, w; 
+}; 
+
+typedef struct CompositeHookData_s {
+	struct BitMap *sourceBitMap; // The source bitmap
+	int32 sourceX,sourceY;
+	int32 sourceWidth, sourceHeight; // The source dimensions
+	int32 offsetX, offsetY; // The offsets to the destination area relative to the window's origin
+	int32 destWidth, destHeight;
+	int32 scaleX, scaleY; // The scale factors
+	uint32 retCode; // The return code from CompositeTags()
+} CompositeHookData;
 
 
 bool checkMouse(struct Window *win, ULONG bcode)
@@ -53,3 +69,80 @@ void WaitLeftMouse(struct Window *win)
 	else printf("no user port for wait left mouse\n");
 }
 
+static ULONG compositeHookFunc(
+			struct Hook *hook, 
+			struct RastPort *rastPort, 
+			struct BackFillMessage *msg)
+ {
+
+	CompositeHookData *hookData = (CompositeHookData*)hook->h_Data;
+
+	hookData->retCode = CompositeTags(
+		COMPOSITE_Src, 
+			hookData->sourceBitMap, 
+			rastPort->BitMap,
+
+		COMPTAG_SrcX,      abs(hookData->sourceX),
+		COMPTAG_SrcY,      abs(hookData->sourceY),
+		COMPTAG_SrcWidth,   hookData->sourceWidth,
+		COMPTAG_SrcHeight,  hookData->sourceHeight,
+
+		COMPTAG_ScaleX, 	hookData->scaleX,
+		COMPTAG_ScaleY, 	hookData->scaleY,
+
+		COMPTAG_OffsetX,    msg->Bounds.MinX - (msg->OffsetX - msg->Bounds.MinX),
+		COMPTAG_OffsetY,    msg->Bounds.MinY - (msg->OffsetY - msg->Bounds.MinY),
+
+		COMPTAG_DestX,      msg->Bounds.MinX,
+		COMPTAG_DestY,      msg->Bounds.MinY,
+
+		COMPTAG_DestWidth, hookData->destWidth,
+		COMPTAG_DestHeight, hookData->destHeight ,
+
+		COMPTAG_Flags,      COMPFLAG_SrcFilter | COMPFLAG_IgnoreDestAlpha | COMPFLAG_HardwareOnly,
+		TAG_END);
+
+	return 0;
+}
+
+void comp_window_update( struct BitMap *bitmap, struct Window *win)
+{
+	struct Hook hook;
+	static CompositeHookData hookData;
+	struct Rectangle rect;
+	register struct RastPort *RPort = win->RPort;
+
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
+ 	rect.MinX = win->BorderLeft;
+ 	rect.MinY = win->BorderTop;
+ 	rect.MaxX = win->Width - win->BorderRight ;
+ 	rect.MaxY = win->Height - win->BorderBottom ;
+
+	hook.h_Entry = (HOOKFUNC) compositeHookFunc;
+	hook.h_Data = &hookData;
+
+	hookData.sourceBitMap = bitmap;
+
+	hookData.sourceX = -GetBitMapAttr(bitmap,BMA_ACTUALWIDTH);
+	hookData.sourceY =- bitmap -> Rows;
+
+	hookData.sourceWidth =  GetBitMapAttr(bitmap,BMA_ACTUALWIDTH);
+	hookData.sourceHeight = bitmap -> Rows;
+
+	printf("source w %d,h %d\n",hookData.sourceWidth,hookData.sourceHeight);
+
+	hookData.offsetX = win->BorderLeft;
+	hookData.offsetY = win->BorderTop;
+	hookData.retCode = COMPERR_Success;
+
+ 	hookData.destWidth = rect.MaxX - rect.MinX + 1;
+ 	hookData.destHeight = rect.MaxY - rect.MinY + 1;
+
+	hookData.scaleX = COMP_FLOAT_TO_FIX((float) hookData.destWidth / (float) hookData.sourceWidth);
+	hookData.scaleY = COMP_FLOAT_TO_FIX((float) hookData.destHeight / (float) hookData.sourceHeight);
+
+	LockLayer(0, RPort->Layer);
+	DoHookClipRects(&hook, win->RPort, &rect);
+	UnlockLayer( RPort->Layer);
+}

@@ -9,7 +9,7 @@
 #include <proto/graphics.h>
 #include <proto/gadtools.h>
 #include <proto/diskfont.h>
-#include <exec/emulation.h>
+#include <proto/layers.h>
 #include <proto/asl.h>
 
 #include <intuition/imageclass.h>
@@ -26,6 +26,9 @@ struct IntuitionIFace		*IIntuition = NULL;
 
 struct Library			*GraphicsBase = NULL;
 struct GraphicsIFace		*IGraphics = NULL;
+
+struct Library			*LayersBase = NULL;
+struct LayersIFace		*ILayers = NULL;
 
 unsigned char bits2bytes_data[256*8*8];		// 256 values, 8pixels / bits, 8 plaines
 unsigned char *bits2bytes[256*8];			// 256 values. 
@@ -57,6 +60,7 @@ bool open_libs()
 {
 
 	if ( ! open_lib( "intuition.library", 51L , "main", 1, &IntuitionBase, (struct Interface **) &IIntuition  ) ) return FALSE;
+	if ( ! open_lib( "layers.library", 51L , "main", 1, &LayersBase, (struct Interface **) &ILayers  ) ) return FALSE;
 	if ( ! open_lib( "graphics.library", 54L , "main", 1, &GraphicsBase, (struct Interface **) &IGraphics  ) ) return FALSE;
 	if ( ! open_lib( "libblitter.library", 53L , "main", 1, &LibBlitterBase, (struct Interface **) &ILibBlitter  ) ) return FALSE;
 
@@ -68,6 +72,7 @@ bool open_libs()
 void close_libs()
 {
 	close_lib(Intuition);
+	close_lib(Layers);
 	close_lib(Graphics);
 	close_lib(LibBlitter);
 }
