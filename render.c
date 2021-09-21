@@ -25,6 +25,20 @@ ULONG VWaitPos = 0, HWaitPos = 0;
 
 static uint32 palette[256];
 
+union dbPixel
+{
+	uint64 data;
+
+	struct 
+	{
+		uint32 argb1;
+		uint32 argb2;
+	};
+};
+
+static union dbPixel palette2[256];
+
+
 uint32 COP1LC, COP2LC;
 
 uint32 diwstart, diwstop, ddfstart, ddfstop;
@@ -36,6 +50,13 @@ union cop *ptr;
 
 static char data[16];
 static int draw_x,draw_y;
+
+void setPalette(int index,uint32 argb)
+{
+	palette[index] = argb;
+	palette2[index].argb1 = argb;
+	palette2[index].argb2 = argb;
+}
 
 #define DISPLAY_LEFT_SHIFT 0x40	
 #define DIW_DDF_OFFSET 9
@@ -339,12 +360,12 @@ void cop_move(union cop data)
 		case COPJMP2: ptr = (union cop *) COP2LC -1;
 					break;
 
-		case COLOR00: palette[0] = ecs2argb[data.d16.b].argb;	break;
-		case COLOR01: palette[1] = ecs2argb[data.d16.b].argb;	break;
-		case COLOR02: palette[2] = ecs2argb[data.d16.b].argb;	break;
-		case COLOR03: palette[3] = ecs2argb[data.d16.b].argb;	break;
-		case COLOR04: palette[4] = ecs2argb[data.d16.b].argb;	break;
-		case COLOR05: palette[5] = ecs2argb[data.d16.b].argb;	break;
+		case COLOR00: setPalette(0,ecs2argb[data.d16.b].argb);	 break;
+		case COLOR01: setPalette(1,ecs2argb[data.d16.b].argb);	 break;
+		case COLOR02: setPalette(2,ecs2argb[data.d16.b].argb);	 break;
+		case COLOR03: setPalette(3,ecs2argb[data.d16.b].argb);	 break;
+		case COLOR04: setPalette(4,ecs2argb[data.d16.b].argb);	 break;
+		case COLOR05: setPalette(5,ecs2argb[data.d16.b].argb);	 break;
 
 		case BPL1PTH:	setHigh16(bp0,data.d16.b);	bp0ptr = (unsigned char *) bp0;	break;
 		case BPL1PTL: 	setLow16(bp0,data.d16.b);	bp0ptr = (unsigned char *) bp0;	break;
@@ -448,10 +469,10 @@ void plot4_scale1( int x, int y, char *data )
 
 //		is_bad_access( (uint32) d_argb );
 
-		*d_argb++ = palette[ *data ++ ];		// 0
-		*d_argb++ = palette[ *data ++ ];		// 1
-		*d_argb++ = palette[ *data ++ ];		// 2
-		*d_argb = palette[ *data ];			// 3
+		*d_argb++ = palette[ *data ++ ];		// pixel 0
+		*d_argb++ = palette[ *data ++ ];		// pixel 1
+		*d_argb++ = palette[ *data ++ ];		// pixel 2
+		*d_argb++ = palette[ *data ++ ];		// pixel 3
 	}
 }
 
@@ -461,18 +482,14 @@ void plot4_scale2( int x, int y, char *data )
 		 ((x>=0)&&(x<640-8)))
 	{
 		dest_ptr = dest_ptr_image + (dest_bpr*y) + (x*4) ;
-		uint32 *d_argb = (uint32 *)	(dest_ptr);
+		uint64 *d_argb = (uint64 *)	(dest_ptr);
 
 //		is_bad_access( (uint32) d_argb );
 
-		*d_argb++ = palette[ *data ];			// 0
-		*d_argb++ = palette[ *data ++ ];
-		*d_argb++ = palette[ *data ];			// 1
-		*d_argb++ = palette[ *data ++ ];
-		*d_argb++ = palette[ *data ];			// 2
-		*d_argb++ = palette[ *data ++ ];
-		*d_argb++ = palette[ *data ];			// 3
-		*d_argb = palette[ *data ];
+		*d_argb++ = palette2[ *data ++ ].data;		// 0,1
+		*d_argb++ = palette2[ *data++  ].data;		// 2,3
+		*d_argb++ = palette2[ *data ++ ].data;		// 4,5
+		*d_argb = palette2[ *data  ].data;			// 6,7
 	}
 }
 
@@ -483,15 +500,13 @@ void plot4_color0_scale1( int x, int y, char *data )
 		 ((x>=0)&&(x<640-4)))
 	{
 		dest_ptr = dest_ptr_image + (dest_bpr*y) + (x*4) ;
-		uint32 *d_argb = (uint32 *)	(dest_ptr);
-		uint32 color0 = palette[0];
+		uint64 *d_argb = (uint64 *)	(dest_ptr);
+		uint64 color0 = palette2[0].data;
 
 //		is_bad_access( (uint32) d_argb );
 
-		*d_argb++ = color0;
-		*d_argb++ = color0;
-		*d_argb++ = color0;
-		*d_argb = color0;
+		*d_argb++ = color0;		// 0,1
+		*d_argb = color0;			// 2.3
 	}
 }
 
@@ -503,19 +518,15 @@ void plot4_color0_scale2( int x, int y, char *data )
 		 ((x>=0)&&(x<640-8)))
 	{
 		dest_ptr = dest_ptr_image + (dest_bpr*y) + (x*4) ;
-		uint32 *d_argb = (uint32 *)	(dest_ptr);
-		uint32 color0 = palette[0];
+		uint64 *d_argb = (uint64 *)	(dest_ptr);
+		uint64 color0 = palette2[0].data;
 
 //		is_bad_access( (uint32) d_argb );
 
-		*d_argb++ = color0;	// pixel 1
-		*d_argb++ = color0;
-		*d_argb++ = color0;	// pixel 2
-		*d_argb++ = color0;
-		*d_argb++ = color0;	// pixel 3
-		*d_argb++ = color0;
-		*d_argb++ = color0;	// pixel 4
-		*d_argb++ = color0;
+		*d_argb++ = color0;	// pixel 0,1
+		*d_argb++ = color0;	// pixel 2,3
+		*d_argb++ = color0;	// pixel 4,5
+		*d_argb++ = color0;	// pixel 6,7
 	}
 }
 
