@@ -192,6 +192,9 @@ void (*plot4_fn)( int x, int y, char *data ) = NULL;			// current function
 void (*plot4_color0_fn)( int x, int y, char *data ) = NULL;		// current default color0 option function
 void (*plot4_bitmap_fn)( int x, int y, char *data ) = NULL;		// current default bitmap option function
 
+
+void plot4_none_fn ( int x, int y, char *data ) {}	// dummy function... no drawing..
+
 void plot4_color0_scale1( int x, int y, char *data );
 void plot4_color0_scale2( int x, int y, char *data );
 void plot4_scale1( int x, int y, char *data );
@@ -265,12 +268,7 @@ void update_display_offsets()
 	display_chunk16_offset = 16 * display_scale_x;
 }
 
-bool displayed( int scanx, int scany )
-{
-//	return (( mi_disp <= scanx ) && ( scanx < ma_disp));
 
-	return true;
-}
 
 
 void update_ddf( int is_hires )
@@ -461,8 +459,7 @@ void is_bad_access( uint32 addr)
 
 void plot4_scale1( int x, int y, char *data )
 {
-	if (((y>=0)&&(y<480)) &&
-		 ((x>=0)&&(x<640-4)))
+	if	 ((x>=0)&&(x<640-4))
 	{
 		dest_ptr = dest_ptr_image + (dest_bpr*y) + (x*4) ;
 		uint32 *d_argb = (uint32 *)	(dest_ptr);
@@ -478,8 +475,8 @@ void plot4_scale1( int x, int y, char *data )
 
 void plot4_scale2( int x, int y, char *data )
 {
-	if (((y>=0)&&(y<480)) &&
-		 ((x>=0)&&(x<640-8)))
+
+	if	 ((x>=0)&&(x<640-8))
 	{
 		dest_ptr = dest_ptr_image + (dest_bpr*y) + (x*4) ;
 		uint64 *d_argb = (uint64 *)	(dest_ptr);
@@ -496,8 +493,8 @@ void plot4_scale2( int x, int y, char *data )
 
 void plot4_color0_scale1( int x, int y, char *data )
 {
-	if (((y>=0)&&(y<480)) &&
-		 ((x>=0)&&(x<640-4)))
+
+	if	 ((x>=0)&&(x<640-4))
 	{
 		dest_ptr = dest_ptr_image + (dest_bpr*y) + (x*4) ;
 		uint64 *d_argb = (uint64 *)	(dest_ptr);
@@ -514,8 +511,8 @@ void plot4_color0_scale1( int x, int y, char *data )
 
 void plot4_color0_scale2( int x, int y, char *data )
 {
-	if (((y>=0)&&(y<480)) &&
-		 ((x>=0)&&(x<640-8)))
+
+	if	 ((x>=0)&&(x<640-8))
 	{
 		dest_ptr = dest_ptr_image + (dest_bpr*y) + (x*4) ;
 		uint64 *d_argb = (uint64 *)	(dest_ptr);
@@ -529,20 +526,6 @@ void plot4_color0_scale2( int x, int y, char *data )
 		*d_argb++ = color0;	// pixel 6,7
 	}
 }
-
-
-/*
-APTR _ba;
-ULONG _bpr;
-
-struct TagItem stdBMLock[] =
-	{
-		{LBM_BaseAddress, &_ba },
-		{LBM_BytesPerRow, &_bpr},
-		{TAG_END}
-	};
-
-*/
 
 union argb_u ecs2argb[0x10000];
 
@@ -672,7 +655,41 @@ void draw_( int draw_x, int draw_y, char *data)
 		inc_clock(clock_speed);
 }
 
+bool beam_y_is_visible = true;
 
+bool displayed( int scanx )
+{
+	return  beam_y_is_visible;
+}
+
+
+void beam_y_moved()		// not happing often, try move code out make loop smaller.
+{
+	draw_x = display_offset_x;
+	draw_y = (beam_y-display_y)*display_scale_y;
+				
+	if (draw_y<0)
+	{
+		beam_y_is_visible = false;
+	}
+	else 	if (draw_y>480)
+	{
+		beam_y_is_visible = false;
+
+		if ((beam_wordpos & wait_beam_enable) < wait_beam)
+		{
+			// light speed move to the end...
+
+			beam_clock = 0;
+			beam_y = beam_y & 0xFF00 | ((wait_beam & 0xFF00) >> 8);
+			beam_x = (wait_beam & 0xFE) >> 1;
+			beam_wordpos = ( (beam_y & 0xFF) << 8) | ((beam_x & 0x7F) << 1);
+
+			draw_y = (beam_y-display_y)*display_scale_y;
+		}
+	}
+	else 	beam_y_is_visible = true;
+}
 
 inline void __render()
 {
@@ -692,38 +709,38 @@ inline void __render()
 			{
 				if (lbeam_y - beam_y)
 				{
-					draw_x = display_offset_x;
-					draw_y = (beam_y-display_y)*display_scale_y;
+					beam_y_moved();
 				}
 				else 	draw_x += display_chunk16_offset;
 
 				if (check16(beam_x,beam_y) == false)
 				{
-					plot4_fn = plot4_color0_fn;
+					if (beam_y_is_visible)
+					{
+						plot4_fn = plot4_color0_fn;
+						to_draw_count = 4;
+					}
+					else
+					{
+						plot4_fn = plot4_none_fn;
+						to_draw_count = 0;
+					}
 				}
 				else
 				{
-					if (displayed(beam_x,beam_y))
+					if (displayed(beam_x))
 					{
 						convert16( data );
 						plot4_fn = plot4_bitmap_fn;
+						to_draw_count = 4;
 					}
 					else
 					{
 						move16();
-						plot4_fn = plot4_color0_fn;
+						plot4_fn = plot4_none_fn;
+						to_draw_count = 0;
 					}
 				}
-
-				if ( (draw_x< 640+64))
-				{
-					to_draw_count = 4;
-				}
-				else
-				{
-					to_draw_count = 0;
-				}
-
 				offset = 0;
 			}
 }
