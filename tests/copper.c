@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include <proto/dos.h>
 #include <proto/exec.h>
 #include <proto/intuition.h>
 #include <proto/graphics.h>
@@ -72,9 +73,11 @@ int main()
 
 	if (open_libs())
 	{
+		int n;
 		init_ecs2colors();
 
 		struct Window *win;
+		struct BitMap *copperBitmap;
 
 		win = OpenWindowTags( NULL, 
 			WA_IDCMP,IDCMP_MOUSEBUTTONS,
@@ -84,8 +87,19 @@ int main()
 			WA_Height, 480 + 128,
 			TAG_END);
 
-		if (win)
+		if (win) copperBitmap =AllocBitMap( win -> Width, win -> Height, 32, BMF_DISPLAYABLE, win ->RPort -> BitMap);
+
+		if ((win)&&(copperBitmap))
 		{
+			struct RastPort rp;
+
+			InitRastPort(&rp);
+
+			rp.BitMap = copperBitmap;
+
+			RectFillColor(&rp, 0, 0, win -> Width, win -> Height, 0xFF000000);
+
+
 			cop_move_(DIWSTART,0x2C81);
 			cop_move_(DIWSTOP,0xF4C1);
 
@@ -95,7 +109,10 @@ int main()
 			int wc = DispDataFetchWordCount( 0, ddfstart, ddfstop);
 
 			init_copper_list();
-			render_copper( custom, copperList,  win -> RPort );
+			render_copper( custom, copperList,  copperBitmap );
+//			comp_window_update( copperBitmap, win);
+
+    			BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
 
 			printf("data fetch start %d (pixels %d)\n",ddfstart,DispDataFetchWordCount( 0, 0,ddfstart)*16);
 			printf("data fetch word count %d (pixels %d)\n",wc,wc*16);
@@ -106,9 +123,16 @@ int main()
 			printf("rows %d\n", (diwstopy & 0x80 ? diwstopy : diwstopy + 0x100) - diwstarty );
 
 			WaitLeftMouse(win);
-//			getchar();
+		}
 
-			CloseWindow(win);
+		if (win)
+		{
+			CloseWindow(win); win = NULL;
+		}
+
+		if (copperBitmap)
+		{
+			FreeBitMap( copperBitmap ); copperBitmap = NULL;
 		}
 		
 	}

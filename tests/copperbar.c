@@ -33,6 +33,8 @@ struct Custom *custom = 0xDFF000;
 
 struct Window *win;
 
+struct BitMap *copperBitmap;
+
 struct bar
 {
 	unsigned int c;
@@ -65,6 +67,10 @@ bool initScreen()
 					TAG_END);
 
 	if (!win) return false;
+
+	copperBitmap =AllocBitMap( win -> Width, win -> Height, 32, BMF_DISPLAYABLE, win ->RPort -> BitMap);
+
+	if (!copperBitmap) return false;
 
 	return true;
 }
@@ -155,6 +161,8 @@ void init_copper(int linestart, int height)
 void closeDown()
 {
 	if (win) CloseWindow(win);
+
+	if (copperBitmap) FreeBitMap(copperBitmap);
 }
 
 int main_prog()
@@ -183,7 +191,10 @@ int main_prog()
 
 
 //			dump_copper( copperList );
-			render_copper( custom, copperList, win -> RPort );
+			render_copper( custom, copperList, copperBitmap );
+
+   			BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
+
 
          		/* Check & clear CTRL_C signal */
 			if(SetSignal(0L,SIGBREAKF_CTRL_C) & SIGBREAKF_CTRL_C)
