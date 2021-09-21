@@ -23,7 +23,7 @@ uint32 bp0, bp1, bp2, bp3, bp4, bp5, bp6, bp7;
 ULONG last_VWaitPos = 0, last_HWaitPos = 0;
 ULONG VWaitPos = 0, HWaitPos = 0;
 
-static uint32 color[256];
+static uint32 palette[256];
 
 uint32 COP1LC, COP2LC;
 
@@ -34,13 +34,53 @@ uint16 beam_wordpos = 0;
 
 union cop *ptr;
 
-#define display_bx 0x81
-#define display_wx ((display_bx-4)/2)
+static char data[16];
+static int draw_x,draw_y;
+
+#define DISPLAY_LEFT_SHIFT 0x40	
+#define DIW_DDF_OFFSET 9
+#define display_bx 109
 #define display_y 10
+
+#define enable_writeimage 1
+
+uint32 first_addr;
+uint32 last_addr;
+
+void update_ddf( int is_hires );
 
 extern unsigned char *bp0ptr,*bp1ptr,*bp2ptr,*bp3ptr,*bp4ptr,*bp5ptr,*bp6ptr,*bp7ptr;
 
-static struct RastPort *copper_rp = NULL;
+
+// according to hardware reference manual, pixel data spend a couple of cycles somwhere in the chip 
+
+// ignore first 0x40 pixels at start of the display. these are hidden..
+
+
+int gfx_shift = 0;
+
+int coord_hw_to_winodw_x(int x)
+{
+	x -= DISPLAY_LEFT_SHIFT;
+	return x << gfx_shift;		// depends on lowres / hires
+}
+
+int coord_window_to_hw_x(int x)
+{
+	x >>= gfx_shift;
+	return x + DISPLAY_LEFT_SHIFT;
+}
+
+int coord_window_to_diw_x( int x )
+{
+	x =  coord_window_to_hw_x(x);
+	return x - DIW_DDF_OFFSET;
+}
+
+int coord_diw_to_window_x( int x)
+{
+	return (x - DISPLAY_LEFT_SHIFT + DIW_DDF_OFFSET - 1 ) << gfx_shift;
+}
 
 // ddfstart = ddfstop - (9 *(wc-1))
 // -------------------
@@ -64,7 +104,9 @@ int DispWinToDispDataFetch(int hires, int diwstart)
 
 int DispDataFetchWordCount( int hires, int ddfstart, int ddfstop)
 {
-	// lowres, 8 clocks 
+	// bit 0, is used, ddfstart is 2x the size it should be..
+
+	// lowres, 8 clocks // 16bit -> 2 bytes -> 4 nibbels * scale = 8..
 	if ( !hires)	return  ((ddfstop- ddfstart) / 8) +1 ;
 
 	// hires, 4 clocks
@@ -73,16 +115,21 @@ int DispDataFetchWordCount( int hires, int ddfstart, int ddfstop)
 
 void init_ecs2colors()
 {
+	union argb_u *color ;
+
 	s_odd = 0;
 	s_even = 0;
 
 	uint32 i;
+
+	color = ecs2argb;
 	for (i=0;i<0x10000;i++)
 	{
-		 ecs2argb[i] = 0xFF000000 
-			| ( (i & 0xF00) << 12)
-			| ( (i & 0xF0) << 8)
-			| ( (i & 0xF) << 4);
+		color -> channel.a = 0xFF;
+		color -> channel.r = ((i & 0xF00) >> 8) * 0x11;
+		color -> channel.g = ((i & 0xF0) >> 4) * 0x11;
+		color -> channel.b = (i & 0xF) * 0x11;
+		color ++;
 	}
 }
 
@@ -141,7 +188,7 @@ static uint32 beam_x,beam_y;
 
 void update_display_offsets()
 {
-	display_offset_x = (ddf_mix - display_wx) * 4 ;
+	update_ddf(hires);
 
 	if (hires)
 	{
@@ -150,6 +197,7 @@ void update_display_offsets()
 		pixels_per_chunk = 8;
 		num_chunks = 2;
 		clock_speed = 2;
+		gfx_shift = 0;
 
 		switch (display_scale_x)
 		{
@@ -170,6 +218,7 @@ void update_display_offsets()
 		pixels_per_chunk = 4;
 		num_chunks = 4;
 		clock_speed = 1;
+		gfx_shift = 1;
 
 		switch (display_scale_x)
 		{
@@ -183,6 +232,10 @@ void update_display_offsets()
 					break;
 		}
 	}
+
+	// ddf_mix is clocks... from edge.
+
+	display_offset_x = -( 7 * 16 * display_scale_x) + DIW_DDF_OFFSET;
 
 	mi_disp = dispwindow.x0 / 2;
 	ma_disp = dispwindow.x1  /2 ;
@@ -199,12 +252,11 @@ bool displayed( int scanx, int scany )
 }
 
 
-void update_ddf()
+void update_ddf( int is_hires )
 {
-	ddf_wc = DispDataFetchWordCount( 0, ddfstart, ddfstop) ;
-	ddf_mix = DispDataFetchWordCount( 0, 0,ddfstart);
+	ddf_wc = DispDataFetchWordCount( is_hires, ddfstart, ddfstop) ;
+	ddf_mix = DispDataFetchWordCount( is_hires, 0,ddfstart);
 	ddf_max = ddf_mix + ddf_wc ;
-	update_display_offsets();
 }
 
 void 	update_routines( int planes )
@@ -224,8 +276,6 @@ void 	update_routines( int planes )
 
 void cop_wait(union cop data)
 {
-//	printf("Cop_wait\n");
-
 	if (data.d32 == 0xFFFFFFFE)
 	{
 		if (beam_y >= 255)
@@ -276,11 +326,11 @@ void cop_move(union cop data)
 					break;
 
 		case DDFSTART: ddfstart = data.d16.b; 
-					update_ddf();
+					update_display_offsets();
 					break;
 
 		case DDFSTOP: ddfstop = data.d16.b; 
-					update_ddf();
+					update_display_offsets();
 					break;
 
 		case COPJMP1: ptr = (union cop *) COP1LC -1;
@@ -289,12 +339,12 @@ void cop_move(union cop data)
 		case COPJMP2: ptr = (union cop *) COP2LC -1;
 					break;
 
-		case COLOR00: color[0] = ecs2argb[data.d16.b];	break;
-		case COLOR01: color[1] = ecs2argb[data.d16.b];	break;
-		case COLOR02: color[2] = ecs2argb[data.d16.b];	break;
-		case COLOR03: color[3] = ecs2argb[data.d16.b];	break;
-		case COLOR04: color[4] = ecs2argb[data.d16.b];	break;
-		case COLOR05: color[5] = ecs2argb[data.d16.b];	break;
+		case COLOR00: palette[0] = ecs2argb[data.d16.b].argb;	break;
+		case COLOR01: palette[1] = ecs2argb[data.d16.b].argb;	break;
+		case COLOR02: palette[2] = ecs2argb[data.d16.b].argb;	break;
+		case COLOR03: palette[3] = ecs2argb[data.d16.b].argb;	break;
+		case COLOR04: palette[4] = ecs2argb[data.d16.b].argb;	break;
+		case COLOR05: palette[5] = ecs2argb[data.d16.b].argb;	break;
 
 		case BPL1PTH:	setHigh16(bp0,data.d16.b);	bp0ptr = (unsigned char *) bp0;	break;
 		case BPL1PTL: 	setLow16(bp0,data.d16.b);	bp0ptr = (unsigned char *) bp0;	break;
@@ -373,36 +423,104 @@ void move16()
 	move_routine();
 }
 
+
+APTR lock;
+ULONG dest_format;
+unsigned char *dest_ptr_image;
+unsigned char *dest_ptr;
+unsigned int dest_bpr;
+
+void is_bad_access( uint32 addr)
+{
+	if ((first_addr > addr)  ||  addr >= last_addr  ) 
+	{
+		DebugPrintF("bad access\n"); 
+	};
+}
+
 void plot4_scale1( int x, int y, char *data )
 {
-	WritePixelColor(copper_rp,x++,y,color[ *data ++ ]);
-	WritePixelColor(copper_rp,x++,y,color[ *data ++ ]);
-	WritePixelColor(copper_rp,x++,y,color[ *data ++ ]);
-	WritePixelColor(copper_rp,x,y,color[ *data ++ ]);
+	if (((y>=0)&&(y<480)) &&
+		 ((x>=0)&&(x<640-4)))
+	{
+		dest_ptr = dest_ptr_image + (dest_bpr*y) + (x*4) ;
+		uint32 *d_argb = (uint32 *)	(dest_ptr);
+
+//		is_bad_access( (uint32) d_argb );
+
+		*d_argb++ = palette[ *data ++ ];		// 0
+		*d_argb++ = palette[ *data ++ ];		// 1
+		*d_argb++ = palette[ *data ++ ];		// 2
+		*d_argb = palette[ *data ];			// 3
+	}
 }
 
 void plot4_scale2( int x, int y, char *data )
 {
-	WritePixelColor(copper_rp,x++,y,color[ *data ]);			// 0
-	WritePixelColor(copper_rp,x++,y,color[ *data ++ ]);
-	WritePixelColor(copper_rp,x++,y,color[ *data ]);		// 1
-	WritePixelColor(copper_rp,x++,y,color[ *data ++ ]);
-	WritePixelColor(copper_rp,x++,y,color[ *data ]);		// 2
-	WritePixelColor(copper_rp,x++,y,color[ *data ++ ]);
-	WritePixelColor(copper_rp,x++,y,color[ *data ]);		// 3
-	WritePixelColor(copper_rp,x,y,color[ *data ++ ]);
+	if (((y>=0)&&(y<480)) &&
+		 ((x>=0)&&(x<640-8)))
+	{
+		dest_ptr = dest_ptr_image + (dest_bpr*y) + (x*4) ;
+		uint32 *d_argb = (uint32 *)	(dest_ptr);
+
+//		is_bad_access( (uint32) d_argb );
+
+		*d_argb++ = palette[ *data ];			// 0
+		*d_argb++ = palette[ *data ++ ];
+		*d_argb++ = palette[ *data ];			// 1
+		*d_argb++ = palette[ *data ++ ];
+		*d_argb++ = palette[ *data ];			// 2
+		*d_argb++ = palette[ *data ++ ];
+		*d_argb++ = palette[ *data ];			// 3
+		*d_argb = palette[ *data ];
+	}
 }
 
 
 void plot4_color0_scale1( int x, int y, char *data )
 {
-	uint32 color0 = color[0];
-	WritePixelColor(copper_rp,x++,y,color0);
-	WritePixelColor(copper_rp,x++,y,color0);
-	WritePixelColor(copper_rp,x++,y,color0);
-	WritePixelColor(copper_rp,x,y,color0);
+	if (((y>=0)&&(y<480)) &&
+		 ((x>=0)&&(x<640-4)))
+	{
+		dest_ptr = dest_ptr_image + (dest_bpr*y) + (x*4) ;
+		uint32 *d_argb = (uint32 *)	(dest_ptr);
+		uint32 color0 = palette[0];
+
+//		is_bad_access( (uint32) d_argb );
+
+		*d_argb++ = color0;
+		*d_argb++ = color0;
+		*d_argb++ = color0;
+		*d_argb = color0;
+	}
 }
 
+
+
+void plot4_color0_scale2( int x, int y, char *data )
+{
+	if (((y>=0)&&(y<480)) &&
+		 ((x>=0)&&(x<640-8)))
+	{
+		dest_ptr = dest_ptr_image + (dest_bpr*y) + (x*4) ;
+		uint32 *d_argb = (uint32 *)	(dest_ptr);
+		uint32 color0 = palette[0];
+
+//		is_bad_access( (uint32) d_argb );
+
+		*d_argb++ = color0;	// pixel 1
+		*d_argb++ = color0;
+		*d_argb++ = color0;	// pixel 2
+		*d_argb++ = color0;
+		*d_argb++ = color0;	// pixel 3
+		*d_argb++ = color0;
+		*d_argb++ = color0;	// pixel 4
+		*d_argb++ = color0;
+	}
+}
+
+
+/*
 APTR _ba;
 ULONG _bpr;
 
@@ -413,23 +531,9 @@ struct TagItem stdBMLock[] =
 		{TAG_END}
 	};
 
-void plot4_color0_scale2( int x, int y, char *data )
-{
-	uint32 color0 = color[0];
+*/
 
-	WritePixelColor(copper_rp,x++,y,color0);
-	WritePixelColor(copper_rp,x++,y,color0);
-	WritePixelColor(copper_rp,x++,y,color0);
-	WritePixelColor(copper_rp,x++,y,color0);
-	WritePixelColor(copper_rp,x++,y,color0);
-	WritePixelColor(copper_rp,x++,y,color0);
-	WritePixelColor(copper_rp,x++,y,color0);
-	WritePixelColor(copper_rp,x,y,color0);
-
-}
-
-
-uint32 ecs2argb[0x10000];
+union argb_u ecs2argb[0x10000];
 
 void cop_move_(uint16 reg, uint16 data)
 {
@@ -494,7 +598,7 @@ static void box(struct RastPort *rp,int x0,int y0,int x1,int y1)
 	Draw(rp,x0,y0);
 }
 
-void render_DisplayWindow(struct RastPort *rp)
+void render_DisplayWindow_org(struct RastPort *rp)
 {
 	int x0,y0;
 	int x1,y1;
@@ -511,14 +615,33 @@ void render_DisplayWindow(struct RastPort *rp)
 		(dispwindow.x1 - dispwindow.x0+1) / 8,
 		(dispwindow.y1 - dispwindow.y0+1));
 
-	x0 = (dispwindow.x0 - (display_bx - 20))*2;
-	x1 = (dispwindow.x1 - (display_bx - 20))*2;
+	x0 = (dispwindow.x0 - display_bx)*2;
+	x1 = (dispwindow.x1 - display_bx)*2;
 	y0 = (dispwindow.y0 - display_y) * 2;
 	y1 = (dispwindow.y1 - display_y) * 2;
 
-	for (r=0;r<1;r++) box(rp,x0+r,y0+r,x1-r,y1-r);
+	for (r=-1;r<=1;r++) box(rp,x0+r,y0+r,x1-r,y1-r);
+}
+
+void render_DisplayWindow(struct RastPort *rp)
+{
+	int x0,y0;
+	int x1,y1;
+
+	int r;
+	SetAPen(rp,2);
+
+	x0 = (ddfstart>>1)*16 - DISPLAY_LEFT_SHIFT*2;
+	x1 = (ddfstop>>1)*16 - DISPLAY_LEFT_SHIFT*2;
+	y0 = (dispwindow.y0 - display_y) * 2;
+	y1 = (dispwindow.y1 - display_y) * 2;
+
+	for (r=-1;r<=1;r++) box(rp,x0+r,y0+r,x1-r,y1-r);
+
+	printf("DisplayWindow: %d,%d to %d,%d\n",x0,y0,x1,y1);
 
 }
+
 
 	int to_draw_count = 0;
 
@@ -529,6 +652,7 @@ void draw_( int draw_x, int draw_y, char *data)
 		while (to_draw_count -- )
 		{
 			plot4_fn( draw_x + (offset * display_chunk_offset) ,  draw_y, data + (offset * pixels_per_chunk) );
+			draw_x += display_chunk16_offset;
 			offset ++;
 			inc_clock(clock_speed);
 		}
@@ -537,10 +661,9 @@ void draw_( int draw_x, int draw_y, char *data)
 		inc_clock(clock_speed);
 }
 
-static char data[16];
-static int draw_x,draw_y;
 
-void __render()
+
+inline void __render()
 {
 			if (to_draw_count)
 			{
@@ -550,12 +673,18 @@ void __render()
 				inc_clock(clock_speed);
 			}
 			else 
+			{
 				inc_clock(clock_speed);
+			}
 
 			if ( lbeam_x - beam_x ) 
 			{
-
-				if (lbeam_y - beam_y) draw_y = (beam_y-display_y)*display_scale_y;
+				if (lbeam_y - beam_y)
+				{
+					draw_x = display_offset_x;
+					draw_y = (beam_y-display_y)*display_scale_y;
+				}
+				else 	draw_x += display_chunk16_offset;
 
 				if (check16(beam_x,beam_y) == false)
 				{
@@ -575,7 +704,7 @@ void __render()
 					}
 				}
 
-				if (draw_x< 640+64) 
+				if ( (draw_x< 640+64))
 				{
 					to_draw_count = 4;
 				}
@@ -584,18 +713,15 @@ void __render()
 					to_draw_count = 0;
 				}
 
-				draw_x = display_offset_x + (beam_x*display_chunk16_offset);
 				offset = 0;
 			}
 }
 
-void render_copper(struct Custom *custom, uint32 *copperList, struct RastPort *rp)
+void render_copper(struct Custom *custom, uint32 *copperList, struct BitMap *bm )
 {
 	char ck = '*';
 	bool beam_wait = false;
 	bool wtf = false;
-
-	copper_rp = rp;
 
 	ptr = (union cop *) copperList;
 
@@ -618,28 +744,39 @@ void render_copper(struct Custom *custom, uint32 *copperList, struct RastPort *r
 	wait_beam_enable = 0;
 	wait_beam = 0;
 
-	for (;;)
+	lock = LockBitMapTags( bm,
+		LBM_PixelFormat, &dest_format,
+		LBM_BytesPerRow, &dest_bpr,
+		LBM_BaseAddress, &dest_ptr_image,
+		TAG_END	 );
+
+	if (lock)
 	{
-		switch (ptr -> d32 & 0x00010001)
+		first_addr = (uint32) dest_ptr_image;
+		last_addr = first_addr + ( dest_bpr * bm -> Rows);
+
+		for (;;)
 		{
-			case 0x00000000:
-			case 0x00000001:	cop_move( *ptr ); break;
-			case 0x00010000:	cop_wait( *ptr);  beam_wait=true; break;
-			case 0x00010001:	cop_skip( *ptr); break;
+			switch (ptr -> d32 & 0x00010001)
+			{
+				case 0x00000000:
+				case 0x00000001:	cop_move( *ptr ); break;
+				case 0x00010000:	cop_wait( *ptr);  beam_wait=true; break;
+				case 0x00010001:	cop_skip( *ptr); break;
+			}
+
+			do
+			{
+				__render();
+
+			} while ((beam_wordpos & wait_beam_enable) < wait_beam);
+
+			if (ptr -> d32 == 0xFFFFFFFE) break;
+			ptr ++;
 		}
 
-		do
-		{
-			__render();
-		} while ((beam_wordpos & wait_beam_enable) < wait_beam);
-
-//		Printf("Beam_y %04lx --- beam_wordpos %08lx\n",beam_y, beam_wordpos);
-
-		if (ptr -> d32 == 0xFFFFFFFE) break;
-		ptr ++;
+		UnlockBitMap(lock);
 	}
-
-//	render_DisplayWindow(rp);
 }
 
 

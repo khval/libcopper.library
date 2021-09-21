@@ -133,7 +133,6 @@ static void convert_8p(uint64 *data)
 
 uint64 convert_none()
 {
-	printf("--no planar data--\n");
 	return 0;
 }
 

@@ -68,6 +68,8 @@ typedef unsigned short uint16;
 
 #define lowres_clock 4
 
+#pragma pack(2)
+
 union cop
 {
 	uint32 d32;
@@ -78,10 +80,27 @@ union cop
 	} d16;
 };
 
+#pragma pack(1)
+
+union argb_u
+{
+	uint32 argb;
+	struct
+	{
+		uint8 a;
+		uint8 r;
+		uint8 g;
+		uint8 b;
+	} channel;
+};
+
+#pragma pack()
+
 extern uint32 copperList[2000 + 0x1000];
 extern uint32 copperl1;
 extern uint32 copperl2;
-extern uint32 ecs2argb[0x10000];
+
+extern union argb_u ecs2argb[0x10000];
 
 extern uint32 COP1LC, COP2LC;
 extern uint32 diwstart, diwstop, ddfstart, ddfstop;
@@ -97,6 +116,6 @@ extern void cop_move(union cop data);
 extern void plot( int x,int y , char *data);
 extern void cop_move_(uint16 reg, uint16 data);
 extern void cop_skip(union cop data);
-extern void render_copper(struct Custom *custom, uint32 *copperList, struct RastPort *rp);
+extern void render_copper(struct Custom *custom, uint32 *copperList, struct BitMap *bm);
 extern void dump_copper(uint32 *copperList);
 
