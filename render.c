@@ -23,8 +23,6 @@ uint32 bp0, bp1, bp2, bp3, bp4, bp5, bp6, bp7;
 ULONG last_VWaitPos = 0, last_HWaitPos = 0;
 ULONG VWaitPos = 0, HWaitPos = 0;
 
-static uint32 palette[256];
-
 union dbPixel
 {
 	uint64 data;
@@ -53,7 +51,6 @@ static int draw_x,draw_y;
 
 void setPalette(int index,uint32 argb)
 {
-	palette[index] = argb;
 	palette2[index].argb1 = argb;
 	palette2[index].argb2 = argb;
 }
@@ -464,12 +461,10 @@ void plot4_scale1( int x, int y, char *data )
 		dest_ptr = dest_ptr_image + (dest_bpr*y) + (x*4) ;
 		uint32 *d_argb = (uint32 *)	(dest_ptr);
 
-//		is_bad_access( (uint32) d_argb );
-
-		*d_argb++ = palette[ *data ++ ];		// pixel 0
-		*d_argb++ = palette[ *data ++ ];		// pixel 1
-		*d_argb++ = palette[ *data ++ ];		// pixel 2
-		*d_argb++ = palette[ *data ++ ];		// pixel 3
+		*d_argb++ = palette2[ *data ++ ].argb1;		// pixel 0
+		*d_argb++ = palette2[ *data ++ ].argb1;		// pixel 1
+		*d_argb++ = palette2[ *data ++ ].argb1;		// pixel 2
+		*d_argb++ = palette2[ *data ++ ].argb1;		// pixel 3
 	}
 }
 
@@ -480,8 +475,6 @@ void plot4_scale2( int x, int y, char *data )
 	{
 		dest_ptr = dest_ptr_image + (dest_bpr*y) + (x*4) ;
 		uint64 *d_argb = (uint64 *)	(dest_ptr);
-
-//		is_bad_access( (uint32) d_argb );
 
 		*d_argb++ = palette2[ *data ++ ].data;		// 0,1
 		*d_argb++ = palette2[ *data++  ].data;		// 2,3
@@ -499,8 +492,6 @@ void plot4_color0_scale1( int x, int y, char *data )
 		dest_ptr = dest_ptr_image + (dest_bpr*y) + (x*4) ;
 		uint64 *d_argb = (uint64 *)	(dest_ptr);
 		uint64 color0 = palette2[0].data;
-
-//		is_bad_access( (uint32) d_argb );
 
 		*d_argb++ = color0;		// 0,1
 		*d_argb = color0;			// 2.3
@@ -559,29 +550,6 @@ void inc_clock(int n)
 	}
 }
 
-void dump_copper(uint32 *copperList)
-{
-	const char *cmd;
-
-	printf("------------ dump_copper -----------------\n");
-
-	ptr = (union cop *) copperList;
-
-	for (;ptr -> d32 != 0xFFFFFFFE;ptr++)
-	{
-		switch (ptr -> d32 & 0x00010001)
-		{
-			case 0x00000000: 
-			case 0x00000001:	cmd = "Move" ; break;
-			case 0x00010000:	cmd = "Wait" ; break;
-			case 0x00010001:	cmd = "Skip" ; break;
-		}
-
-//		printf("%-8s: %04x,%04x\n", cmd, ptr -> d16.a , ptr -> d16.b ); 
-	}
-
-//	printf("%-8s: %04x,%04x\n", "END",  0xFFFF , 0xFFFE ); 
-}
 
 static void box(struct RastPort *rp,int x0,int y0,int x1,int y1)
 {
@@ -789,7 +757,7 @@ void render_copper(struct Custom *custom, uint32 *copperList, struct BitMap *bm 
 			{
 				case 0x00000000:
 				case 0x00000001:	cop_move( *ptr ); break;
-				case 0x00010000:	cop_wait( *ptr);  beam_wait=true; break;
+				case 0x00010000:	cop_wait( *ptr);  break;
 				case 0x00010001:	cop_skip( *ptr); break;
 			}
 

@@ -1,10 +1,17 @@
 
 #include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <proto/intuition.h>
 #include <proto/graphics.h>
 #include <proto/layers.h>
+
+#include "render.h"
+
 
 struct XYSTW_Vertex3D { 
 	float x, y; 
@@ -146,3 +153,29 @@ void comp_window_update( struct BitMap *bitmap, struct Window *win)
 	DoHookClipRects(&hook, win->RPort, &rect);
 	UnlockLayer( RPort->Layer);
 }
+
+void dump_copper(uint32 *copperList)
+{
+	union cop *ptr;
+	const char *cmd;
+
+	printf("------------ dump_copper -----------------\n");
+
+	ptr = (union cop *) copperList;
+
+	for (;ptr -> d32 != 0xFFFFFFFE;ptr++)
+	{
+		switch (ptr -> d32 & 0x00010001)
+		{
+			case 0x00000000: 
+			case 0x00000001:	cmd = "Move" ; break;
+			case 0x00010000:	cmd = "Wait" ; break;
+			case 0x00010001:	cmd = "Skip" ; break;
+		}
+
+		printf("%-8s: %04x,%04x\n", cmd, ptr -> d16.a , ptr -> d16.b ); 
+	}
+
+	printf("%-8s: %04x,%04x\n", "END",  0xFFFF , 0xFFFE ); 
+}
+
