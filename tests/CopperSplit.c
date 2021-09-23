@@ -47,6 +47,7 @@ struct Custom *custom = 0xDFF000;
 #define Shr(x,n) (x << n)
 
 struct Window *win = NULL;
+struct BitMap *copperBitmap = NULL;
 
 struct BitMap *gfx_bm = NULL;
 
@@ -65,13 +66,22 @@ bool initScreen()
 
 	if (!win) return false;
 
+	copperBitmap =AllocBitMap( win -> Width, win -> Height, 32, BMF_DISPLAYABLE, win ->RPort -> BitMap);
+
+	if (!copperBitmap)  return false;
+
 	return true;
 }
 
 void closeDown()
 {
 	if (win) CloseWindow(win);
+	if (copperBitmap) FreeBitMap( copperBitmap ); 
+
+	win = NULL;
+	copperBitmap = NULL;
 }
+
 
 
 void errors()
@@ -235,7 +245,8 @@ int main_prog()
 		init_planes();
 		init_copper( 320,200, 0,win->Height);
 	
-		render_copper( custom, copperList, win -> RPort );
+		render_copper( custom, copperList , copperBitmap );
+    		BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
 
 		int wc = DispDataFetchWordCount( 0, ddfstart, ddfstop);
 
@@ -243,7 +254,6 @@ int main_prog()
 		printf("data fetch word count %d (pixels %d)\n",wc,wc*16);
 
 		WaitLeftMouse(win);
-//		getchar();
 	}
 	else
 	{

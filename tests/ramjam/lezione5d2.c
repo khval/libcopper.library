@@ -28,7 +28,8 @@ struct Custom *custom = 0xDFF000;
 
 uint32 *BPLPOINTERS = NULL;
 
-struct Window *win;
+struct Window *win = NULL;
+struct BitMap *copperBitmap = NULL;
 
 uint32 d0,d1;
 uint32 a0,a1;
@@ -132,7 +133,8 @@ void _main_loop_()
 	{
 		WaitTOF();		
 
-		render_copper( custom, copperList,  win -> RPort );
+		render_copper( custom, copperList,  copperBitmap );
+   		BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
 
 		rsigs = SetSignal(0L,sigs);
 
@@ -349,7 +351,9 @@ int main()
 			WA_Height, 480 + 128,
 			TAG_END);
 
-		if (win)
+		copperBitmap =AllocBitMap( win -> Width, win -> Height, 32, BMF_DISPLAYABLE, win ->RPort -> BitMap);
+
+		if ((win)&&(copperBitmap))
 		{
 			if (win -> UserPort)
 			{
@@ -362,9 +366,10 @@ int main()
 
 			printf("press enter to quit\n");
 			getchar();
-
-			CloseWindow(win);
 		}
+
+		if (win) CloseWindow(win);
+		if (copperBitmap) FreeBitMap(copperBitmap);
 	}
 
 	close_libs();

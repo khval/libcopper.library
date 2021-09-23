@@ -126,15 +126,13 @@ int main()
 		}
 
 		if (win)
-		{
-			CloseWindow(win); win = NULL;
-		}
+			CloseWindow(win); 
+			win = NULL;
 
 		if (copperBitmap)
-		{
-			FreeBitMap( copperBitmap ); copperBitmap = NULL;
-		}
-		
+			FreeBitMap( copperBitmap ); 
+			copperBitmap = NULL;
+	
 	}
 
 	close_libs();

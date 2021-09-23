@@ -161,7 +161,6 @@ void init_copper(int linestart, int height)
 void closeDown()
 {
 	if (win) CloseWindow(win);
-
 	if (copperBitmap) FreeBitMap(copperBitmap);
 }
 
@@ -189,12 +188,8 @@ int main_prog()
 
 			updateCop( copperList, lines );
 
-
-//			dump_copper( copperList );
 			render_copper( custom, copperList, copperBitmap );
-
    			BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
-
 
          		/* Check & clear CTRL_C signal */
 			if(SetSignal(0L,SIGBREAKF_CTRL_C) & SIGBREAKF_CTRL_C)

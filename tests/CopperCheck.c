@@ -30,6 +30,7 @@ struct Custom *custom = 0xDFF000;
 #endif
 
 struct RastPort *rport;
+struct BitMap *copperBitmap = NULL;
 
 int i;
 ULONG linestart,lines,backrgb;
@@ -52,6 +53,10 @@ bool initScreen()
 
 	if (!win) return false;
 
+	copperBitmap =AllocBitMap( win -> Width, win -> Height, 32, BMF_DISPLAYABLE, win ->RPort -> BitMap);
+
+	if (!copperBitmap)  return false;
+
 	return true;
 }
 
@@ -69,19 +74,23 @@ void init_copper(int linestart, int height)
 	{
 		setCop(i << 8  | 1,0);
   		setCop(BPLCON3,0);
-  		setCop(COLOR01,(i-linestart) & 0xFFF);
+  		setCop(COLOR00,(i-linestart) & 0xFFF);
   		setCop(BPLCON3,0x200);
-  		setCop(COLOR01,(0xFFF-i) & 0xFFF);
+  		setCop(COLOR00,(0xFFF-i) & 0xFFF);
 	}
 	
 	setCop(i << 8  | 1,0);
-	setCop(COLOR01,backrgb);
+	setCop(COLOR00,backrgb);
 	setCop(0xFFFF,0xFFFE);
 }
 
 void closeDown()
 {
 	if (win) CloseWindow(win);
+	if (copperBitmap) FreeBitMap( copperBitmap ); 
+
+	win = NULL;
+	copperBitmap = NULL;
 }
 
 void draw_bitamp()
@@ -100,10 +109,10 @@ int main_prog()
 		draw_bitamp();
 	
 		dump_copper( copperList );
-		render_copper( custom, copperList , win -> RPort );
+		render_copper( custom, copperList , copperBitmap );
+    		BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
 
 		WaitLeftMouse(win);
-//		getchar();
 	}
 	else
 	{

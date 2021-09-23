@@ -126,6 +126,7 @@ int main()
 		init_ecs2colors();
 
 		struct Window *win;
+		struct BitMap *copperBitmap;
 
 		if ((plane1) && (plane2))
 		{
@@ -138,7 +139,9 @@ int main()
 				TAG_END);
 		}
 
-		if (win)
+		if (win) copperBitmap =AllocBitMap( win -> Width, win -> Height, 32, BMF_DISPLAYABLE, win ->RPort -> BitMap);
+
+		if ((win)&&(copperBitmap))
 		{
 			struct BitMap bm;
 
@@ -151,7 +154,8 @@ int main()
 			int wc = DispDataFetchWordCount( 0, ddfstart, ddfstop);
 
 			init_copper_list();
-			render_copper( custom, copperList,  win -> RPort );
+			render_copper( custom, copperList,  copperBitmap );
+    			BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
 
 			printf("data fetch start %d (pixels %d)\n",ddfstart,DispDataFetchWordCount(0, 0,ddfstart)*16);
 			printf("data fetch word count %d (pixels %d)\n",wc,wc*16);
@@ -162,11 +166,17 @@ int main()
 			printf("rows %d\n", (diwstopy & 0x80 ? diwstopy : diwstopy + 0x100) - diwstarty );
 
 			WaitLeftMouse(win);
-//			getchar();
-
-			CloseWindow(win);
 		}
 
+		if (win)
+		{
+			CloseWindow(win); win = NULL;
+		}
+
+		if (copperBitmap)
+		{
+			FreeBitMap( copperBitmap ); copperBitmap = NULL;
+		}
 
 		if (plane1) FreeVec( (void*) plane1);
 		if (plane2) FreeVec( (void*) plane2);

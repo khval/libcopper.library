@@ -29,6 +29,7 @@ struct Custom *custom = 0xDFF000;
 #endif
 
 struct Window *win;
+struct BitMap *copperBitmap = NULL;
 
 bool initScreen()
 {
@@ -42,6 +43,10 @@ bool initScreen()
 					TAG_END);
 
 	if (!win) return false;
+
+	copperBitmap =AllocBitMap( win -> Width, win -> Height, 32, BMF_DISPLAYABLE, win ->RPort -> BitMap);
+
+	if (!copperBitmap) return false;
 
 	return true;
 }
@@ -78,13 +83,11 @@ void init_copper(int linestart, int height)
 void closeDown()
 {
 	if (win) CloseWindow(win);
+	if (copperBitmap) FreeBitMap(copperBitmap);
 }
 
 int main_prog()
 {
-
-	Printf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	if (initScreen())
 	{
 		ULONG backrgb;
@@ -105,25 +108,17 @@ int main_prog()
 				SetAPen(rport,1);
 				RectFill(rport,0,linestart,width/2,win -> Height-1);
 
-//				Box(rport,0,linestart,width-1,win -> Height-1,2);
-
 				SetAPen(rport,3);
 				SetBPen(rport,2);
-
-//				Move(rport,20,50);
-//				Text(rport,txt,strlen(txt));
 			}
 		}
-
 		
 		init_copper( linestart,  height );
 
+		render_copper( custom, copperList, copperBitmap );
+   		BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
 
-		render_copper( custom, copperList ,win -> RPort );
-
-//		WaitLeftMouse(win);
-		getchar();
-
+		WaitLeftMouse(win);
 	}
 	else
 	{
