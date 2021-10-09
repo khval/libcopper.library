@@ -9,7 +9,7 @@ This library was made for AmigaOS4.1 and will need some changes to work on anyth
 About the copper.
 ---
 
-Copper is display of Amiga, its responsible controlling pixel clock, where draw the image, 
+Copper is display of Amiga, its responsible controlling pixel clock, it draws the images, 
 and color and sprites, the Copper is part of what is called AGA/OCS or ECS, chipset.
 
 The copper is simple coprocessor, it has few instructions like MOVE, WAIT and SKIP.
