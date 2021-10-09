@@ -1,8 +1,8 @@
 # libcopper.library
 
-This is library intended to linked into binary, to emulate the rendering of the Amiga unique graphic chipset.
-if you just going to make something that looks like amiga graphics, you do it in where different way, with modern effects,
-but if you’re working on updating old code, or porting old code new hardware this, is a more true path.
+This is library intended to be linked into the binary, to emulate the rendering of the Amiga unique graphic chipset.
+if you just going to make something that looks like amiga graphics, you do it in where different way, more effetively with modern effects,
+but if you’re working on updating old code, or porting old code to new hardware, this is a more true path.
 
 This library was made for AmigaOS4.1 and will need some changes to work on anything else.
 
