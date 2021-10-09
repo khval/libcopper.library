@@ -149,15 +149,15 @@ void *planar_routines[]  =
 	convert_8p
 };
 
-void move_none() {};
-void move_1p() { 	printf("** bp0ptr %08x\n",bp0ptr); bp0ptr ++; }
-void move_2p() { bp0ptr ++; bp1ptr ++; }
-void move_3p() { bp0ptr ++; bp1ptr ++; bp2ptr ++; }
-void move_4p() { bp0ptr ++; bp1ptr ++; bp2ptr ++; bp3ptr ++; }
-void move_5p() { bp0ptr ++; bp1ptr ++; bp2ptr ++; bp3ptr ++; bp4ptr ++; }
-void move_6p() { bp0ptr ++; bp1ptr ++; bp2ptr ++; bp3ptr ++; bp4ptr ++; bp5ptr ++; }
-void move_7p() { bp0ptr ++; bp1ptr ++; bp2ptr ++; bp3ptr ++; bp4ptr ++; bp5ptr ++; bp6ptr ++;}
-void move_8p() { bp0ptr ++; bp1ptr ++; bp2ptr ++; bp3ptr ++; bp4ptr ++; bp5ptr ++; bp6ptr ++; bp7ptr ++;}
+void move_none(int n) {};
+void move_1p(int n) { bp0ptr += n; }
+void move_2p(int n) { bp0ptr += n; bp1ptr += n; }
+void move_3p(int n) { bp0ptr += n; bp1ptr += n; bp2ptr += n; }
+void move_4p(int n) { bp0ptr += n; bp1ptr += n; bp2ptr += n; bp3ptr += n; }
+void move_5p(int n) { bp0ptr += n; bp1ptr += n; bp2ptr += n; bp3ptr += n; bp4ptr += n; }
+void move_6p(int n) { bp0ptr += n; bp1ptr += n; bp2ptr += n; bp3ptr += n; bp4ptr += n; bp5ptr += n; }
+void move_7p(int n) { bp0ptr += n; bp1ptr += n; bp2ptr += n; bp3ptr += n; bp4ptr += n; bp5ptr += n; bp6ptr += n;}
+void move_8p(int n) { bp0ptr += n; bp1ptr += n; bp2ptr += n; bp3ptr += n; bp4ptr += n; bp5ptr += n; bp6ptr += n; bp7ptr += n;}
 
 void *move_routines[]  =
 {
