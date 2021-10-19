@@ -15,7 +15,6 @@
 uint32 d0,d1,d2,d3,d4,d5,d6,d7;
 uint32 a0,a1,a2,a3,a4,a5,a6,a7;
 
-
 struct cloud
 {
 	void		*addr;
@@ -23,7 +22,45 @@ struct cloud
 	uint16	x,y,width,height,xspeed;
 };
 
-uint8 *Copper;
+uint16	*Sine = NULL;											//Sine:	INCBIN "Sine.37.200.w"
+uint16	*SineEnd = NULL;										//SineEnd:
+
+uint8 ScrollTextWrap = 0;											//	ScrollTextWrap:
+															//		dc.b 0
+uint16 ScrollCtr=0;												//	ScrollCtr:
+															//		dc.w 0
+uint16 BounceYspeed=0;										// 	BounceYspeed:
+															//		dc.w 0
+uint16 SineCtr=0;												//	SineCtr:
+															//		dc.w 0
+uint32 SkyBufferL[]={0,0};										//	SkyBufferL:
+															//		dc.l 0
+															//		dc.l 0
+uint32 *SkyBufferLE=SkyBufferL + sizeof(SkyBufferL)/sizeof(uint32);		//	SkyBufferLE:
+
+
+uint8		LastChar=0;								//LastChar:
+												//	dc.b 0
+uint8		Cmd_Bounce=0;							//Cmd_Bounce:
+												//	dc.b 0
+uint16	Cmd_StopCount=0;							//Cmd_StopCount:
+												//	dc.w 0
+extern uint16	BarBehind[];
+extern uint16	BarInFront[];
+
+	uint16 *Copper;
+	uint16 *SprP;
+	uint16 *CopBplP;
+	uint16 *CopSkyBplP;
+	uint16 *LogoPal;
+	uint16 *CloudPal;
+	uint16 *waitras1;
+	uint16 *waitras2;
+	uint16 *waitras3;
+	uint16 *waitras4;
+	uint16 *waitras5;
+	uint16 *waitras6;
+
 uint8 *Module1;
 
 uint32 w	=352;
@@ -143,7 +180,6 @@ void Main()
 #define st_w(a,v) *((uint16 *) (a)) = (uint16) (v)
 #define st_l(a,v) *((uint32 *) (a)) = (uint32) (v)
 
-uint8 *SkyBufferL;
 uint8 *CloudCoordsLP;
 uint8 *StarSpr;
 uint8 *StarSpr2;
@@ -168,10 +204,10 @@ void Part1()
 		a0 = ld_l(a3); a3+=4;		//	move.l (a3)+,a0			;bob
 		a2 = ld_l(a3); a3+=4;		//	move.l (a3)+,a2			;mask
 
-		d0 = ld_l(a3); a3+=4;		//	move.w (a3)+,d0			;x coord
-		d1 = ld_l(a3); a3+=4;		//	move.w (a3)+,d1			;y coord
-		d2 = ld_l(a3); a3+=4;		//	move.w (a3)+,d2			;width
-		d3 = ld_l(a3); a3+=4;		//	move.w (a3)+,d3			;height
+		d0 = ld_w(a3); a3+=2;		//	move.w (a3)+,d0			;x coord
+		d1 = ld_w(a3); a3+=2;		//	move.w (a3)+,d1			;y coord
+		d2 = ld_w(a3); a3+=2;		//	move.w (a3)+,d2			;width
+		d3 = ld_w(a3); a3+=2;		//	move.w (a3)+,d3			;height
 		
 		a3+=2;					//	addq.w #2,a3			;skip speed value.
 		d4 = 0x01000000;			//	move.l #0x01000000,d4		;clear blit
@@ -289,7 +325,7 @@ void Part1()
 		d2=32;				//	moveq #32,d2
 		d0= LastChar;			//	move.b LastChar(PC),d0
 							//	cmp.b #'I',d0
-		if (d0 != (uint32) 'I)		//	bne.s .noi
+		if (d0 != (uint32) 'I')		//	bne.s .noi
 			d2=16;			//	moveq #16,d2
 							//.noi:
 		d0 =	ScrollCtr;			//	move.w ScrollCtr(PC),d0
@@ -310,93 +346,128 @@ void Part1()
 
 //    *--- plot clouds ---*
 
-	a1 = SkyBufferL;			//	move.l SkyBufferL(PC),a1
+	a1 = (uint32) SkyBufferL;		//	move.l SkyBufferL(PC),a1
 							//	movem.l CloudCoordsLP(PC),a3-a4
-	addq.w #8,a4
-	moveq #cloudcount-1,d7
-.drawl:
-	move.l (a3)+,a0			;bob
-	move.l (a3)+,a2			;mask
+	a4+=8;					//	addq.w #8,a4
+							//	moveq #cloudcount-1,d7
+	for(d7=cloudcount-1;d7;d7--)			//.drawl:
+	{
+		a0 = ld_l(a3);	a3+=4;	//	move.l (a3)+,a0			;bob
+		a2 = ld_l(a3);	a3+=4;	//	move.l (a3)+,a2			;mask
 
-;	move.w (a3)+,d0			;x coord
-	addq.w #2,a3
-	move.w (a4),d0			;x coord from last frame
-	move.w (a3)+,d1			;y coord
-	move.w (a3)+,d2			;width
-	move.w (a3)+,d3			;height
+							//;	move.w (a3)+,d0			;x coord
+		a3+=2;				//	addq.w #2,a3
+		d0 = ld_w(a4);			//	move.w (a4),d0			;x coord from last frame
+		d1 = ld_w(a3);	a3+=2;	//	move.w (a3)+,d1			;y coord
+		d2 = ld_w(a3);	a3+=2;	//	move.w (a3)+,d2			;width
+		d3 = ld_w(a3);	a3+=2;	//	move.w (a3)+,d3			;height
 
-	add.w (a3)+,d0			;x speed, move cloud
-	move.w #320,d5
-	add.w d2,d5
+		d0 += ld_w(a3);		//	add.w (a3)+,d0			;x speed, move cloud
+		d5 = 320;				//	move.w #320,d5
+		d5 += d2;			//	add.w d2,d5
 
-	cmp.w #320+112,d0
-	blt.b .nowrapx
-	sub.w d5,d0
-.nowrapx:
-	move.w d0,-10(a3)		;replace coord
+		if (d0>=320+112)		//	cmp.w #320+112,d0
+		{					//	blt.b .nowrapx
+			d0=-d5;			//	sub.w d5,d0
+		} 					//.nowrapx:
+		st_w(a3-10,d0);		//	move.w d0,-10(a3)		;replace coord
 
-	move.l #0x0fca0000,d4		;cookie-cut blit
-	bsr.w PlotBob
-	lea cloudstructsize(a4),a4
-	dbf d7,.drawl
+		d4 =0x0fca0000;		//	move.l #0x0fca0000,d4		;cookie-cut blit
+		PlotBob();				//	bsr.w PlotBob
+		a4 = cloudstructsize;	//	lea cloudstructsize(a4),a4
+	}						//	dbf d7,.drawl
 
 //    ---  sine lookup for raster bar vert. pos.  ---
 
-	lea Sine,a0
-	move.w SineCtr,d6
-	move.w #0x4d-6+37,d7
-	add.w (a0,d6.w),d7
+							//	lea Sine,a0
+	d6 = SineCtr;				//	move.w SineCtr,d6
+	d7 = 0x4d-6+37;			//	move.w #0x4d-6+37,d7
+	d7 = a0 + d6;				//	add.w (a0,d6.w),d7
 
-	addq.w #2,d6
-	cmp.w #SineEnd-Sine,d6
-	blt.s .nowrap2
-	moveq #0,d6
-.nowrap2:
-	move.w d6,SineCtr
+	d6+=2;					//	addq.w #2,d6
+	if (d6>SineEnd-Sine)			//	cmp.w #SineEnd-Sine,d6
+	{						//	blt.s .nowrap2
+		d6 = 0;				//	moveq #0,d6
+	}						//.nowrap2:
+	SineCtr = d6;				//	move.w d6,SineCtr
 
 
-//    ---  in front or behind flag  ---
+							//    ---  in front or behind flag  ---
 
-	lea BarInFront,a2	;default source address for RGB color values 
-	cmp.w #50*2,d6
-	blt.s .behind
-	cmp.w #150*2,d6
-	bge.s .behind
-	bra.s .cont
-.behind:
-	lea BarBehind,a2
-.cont:
+	a2 = (uint32) BarInFront;		//	lea BarInFront,a2	;default source address for RGB color values 
+	if ((d6<50*2)				//	cmp.w #50*2,d6
+		|| (d6>150*2)) 			//	blt.s .behind			// if (d6<50*2) goto .behind
+	{						//	cmp.w #150*2,d6
+		a2 = (uint32) BarBehind;		//	bge.s .behind			// if (d6>150*2) goto .behind
+	}						//	bra.s .cont
+							//.behind:
+							//	lea BarBehind,a2
+							//.cont:
 
-	lea waitras1,a0
-	move d7,d0
-	moveq #6-1,d1
-.l:
-	move.b d0,(a0)
-	addq.w #1,d0
+	a0 = (uint32) waitras1;				//	lea waitras1,a0
+	d0 = d7;					//	move d7,d0
+	d1 = 6-1;					//	moveq #6-1,d1
+							//.l:
 
-	move.w (a2)+,d2			;background color from list
-	move.w d2,6(a0)
-	move.w (a2)+,6+4*1(a0)
-	move.w (a2)+,6+4*2(a0)
-	move.w (a2)+,6+4*3(a0)
-	move.w (a2)+,6+4*4(a0)
-	move.w (a2)+,6+4*5(a0)
-	move.w (a2)+,6+4*6(a0)
-	move.w (a2)+,6+4*7(a0)
+	for ( ; d1; d1--)
+	{
+		st_b(a0,d0);				//	move.b d0,(a0)
+		d0++;					//	addq.w #1,d0
 
-	move.w (a2)+,6+4*8(a0)		;2nd playfield
-	move.w (a2)+,6+4*9(a0)
-	move.w (a2)+,6+4*10(a0)
-	move.w (a2)+,6+4*11(a0)
-	move.w (a2)+,6+4*12(a0)
-	move.w (a2)+,6+4*13(a0)
-	move.w (a2)+,6+4*14(a0)
+		d2=ld_w(a2);	a2+=2;		//	move.w (a2)+,d2			;background color from list
+		st_w(a0+6,d2);				//	move.w d2,6(a0)
+							//	move.w (a2)+,6+4*1(a0)
+		st_w(a0+(6+4*1), ld_w(a2));	
+		a2 += 2;
+							//	move.w (a2)+,6+4*2(a0)
+		st_w(a0+(6+4*2), ld_w(a2));	
+		a2 += 2;
+							//	move.w (a2)+,6+4*3(a0)
+		st_w(a0+(6+4*3), ld_w(a2));	
+		a2 += 2;
+							//	move.w (a2)+,6+4*4(a0)
+		st_w(a0+(6+4*4), ld_w(a2));	
+		a2 += 2;
+							//	move.w (a2)+,6+4*5(a0)
+		st_w(a0+(6+4*5), ld_w(a2));	
+		a2 += 2;
+							//	move.w (a2)+,6+4*6(a0)
+		st_w(a0+(6+4*6), ld_w(a2));	
+		a2 += 2;
+							//	move.w (a2)+,6+4*7(a0)
+		st_w(a0+(6+4*7), ld_w(a2));	
+		a2 += 2;
 
-	add.w #4*(9+7),a0		;step to next.
-	DBF d1,.l
 
-;	movem.l (sp)+,d0-a6
-	rts
+							//	move.w (a2)+,6+4*8(a0)		;2nd playfield
+		st_w(a0+(6+4*8), ld_w(a2));	
+		a2 += 2;
+							//	move.w (a2)+,6+4*9(a0)
+		st_w(a0+(6+4*9), ld_w(a2));	
+		a2 += 2;
+							//	move.w (a2)+,6+4*10(a0)
+		st_w(a0+(6+4*10), ld_w(a2));	
+		a2 += 2;
+							//	move.w (a2)+,6+4*11(a0)
+		st_w(a0+(6+4*11), ld_w(a2));	
+		a2 += 2;
+							//	move.w (a2)+,6+4*12(a0)
+		st_w(a0+(6+4*12), ld_w(a2));	
+		a2 += 2;
+							//	move.w (a2)+,6+4*13(a0)
+		st_w(a0+(6+4*13), ld_w(a2));	
+		a2 += 2;
+							//	move.w (a2)+,6+4*14(a0)
+		st_w(a0+(6+4*14), ld_w(a2));	
+		a2 += 2;
+							//	add.w #4*(9+7),a0		;step to next.
+		a0 = 4*(9+7);
+							//	DBF d1,.l
+	}
+
+							//;	movem.l (sp)+,d0-a6
+//	rts
+}
 
 
 VBint:					;Blank template VERTB interrupt
@@ -963,145 +1034,146 @@ Playrtn:
 	include "P6112/P6112-Play.i"
 
 //********** DATA **********
-BarBehind:
-	dc.w 0x558	;color00 value
+uint16	BarBehind[] =
+	{ 0x558	;color00 value
 	logocolors
-	dc.w 0x558	;color00 value
-	dc.w 0x558	;color00 value
-	dc.w 0x558	;color00 value
-	dc.w 0x558	;color00 value
-	dc.w 0x558	;color00 value
-	dc.w 0x558	;color00 value
-	dc.w 0x558	;color00 value
+	, 0x558	;color00 value
+	, 0x558	;color00 value
+	, 0x558	;color00 value
+	, 0x558	;color00 value
+	, 0x558	;color00 value
+	, 0x558	;color00 value
+	, 0x558	;color00 value
 
-	dc.w 0x99d	;color00...
+	, 0x99d	;color00...
 	logocolors
-	dc.w 0x99d	;color00...
-	dc.w 0x99d	;color00...
-	dc.w 0x99d	;color00...
-	dc.w 0x99d	;color00...
-	dc.w 0x99d	;color00...
-	dc.w 0x99d	;color00...
-	dc.w 0x99d	;color00...
+	, 0x99d	;color00...
+	, 0x99d	;color00...
+	, 0x99d	;color00...
+	, 0x99d	;color00...
+	, 0x99d	;color00...
+	, 0x99d	;color00...
+	, 0x99d	;color00...
 
-	dc.w 0xfff
+	, 0xfff
 	logocolors
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
 
-	dc.w 0x99d
+	, 0x99d
 	logocolors
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
 
-	dc.w 0x558
+	, 0x558
 	logocolors
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
 
-	dc.w logobgcol			;restore
-	logocolors
-	cloudcolors
-
-BarInFront:
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-	dc.w 0xfff
-
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-	dc.w 0x99d
-
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-	dc.w 0x558
-
-	dc.w logobgcol
+	, logobgcol			;restore
 	logocolors
 	cloudcolors
+};
+
+uint16	BarInFront[] =
+	{ 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+	, 0xfff
+
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+	, 0x99d
+
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, 0x558
+	, logobgcol
+	logocolors
+	cloudcolors
+ };
 
 FontTbl:
 	dc.b 43,38
@@ -1316,8 +1388,7 @@ gfxname:
 	dc.b "graphics.library",0
 	EVEN
 
-Sine:	INCBIN "Sine.37.200.w"
-SineEnd:
+
 
 ScrollPtr:
 	dc.l ScrollText
@@ -1335,31 +1406,12 @@ ScrollText:
 
 	dcb.b w/32,' '
 	dc.b 1,' '
-ScrollTextWrap:
-	dc.b 0
-
-uint8		LastChar=0;								//LastChar:
-												//	dc.b 0
-uint8		Cmd_Bounce=0;							//Cmd_Bounce:
-												//	dc.b 0
-uint16	Cmd_StopCount=0;							//Cmd_StopCount:
-												//	dc.w 0
-
-ScrollCtr:
-	dc.w 0
-BounceYspeed:
-	dc.w 0
-SineCtr:
-	dc.w 0
-SkyBufferL:
-	dc.l 0
-	dc.l 0
-SkyBufferLE:
 
 
-	IFD Measure
-MaxVpos:dc.w 0
-	ENDC
+
+//	IFD Measure
+//	MaxVpos:dc.w 0
+//	ENDC
 
 	SECTION TutData,DATA_C
 StarSpr:
@@ -1411,171 +1463,211 @@ NullSpr:
 	dc.w 0,0
 	dc.w 0,0
 
-Copper:
-	dc.w 0x1fc,0			;slow fetch mode, AGA compatibility
-	dc.w 0x100,0x0200
-	dc.b 0,0x8e,0x2c,0x81
-	dc.b 0,0x90,0x2c,0xc1
-	dc.w 0x92,0x38
-	dc.w 0x94,0xd0
+#define cop_w( a,b ) *cop_ptr++=a; *cop_ptr++=b; 
 
-	dc.w 0x108,logobwid-logobpl
-	dc.w 0x10a,skybwid-320/8
+void init_copper()
+{
+	uint16 *cop_ptr;
 
-	dc.w 0x102,0
-	dc.w 0x104,0x20
+Copper = malloc( 200  * 2 );
 
-	dc.w 0x1a2,0x99b			;sprite colors
-	dc.w 0x1a4,0xcce
-	dc.w 0x1a6,0xfff
-SprP:
-	dc.w 0x120,0
-	dc.w 0x122,0
-	dc.w 0x124,0
-	dc.w 0x126,0
-	dc.w 0x128,0
-	dc.w 0x12a,0
-	dc.w 0x12c,0
-	dc.w 0x12e,0
-	dc.w 0x130,0
-	dc.w 0x132,0
-	dc.w 0x134,0
-	dc.w 0x136,0
-	dc.w 0x138,0
-	dc.w 0x13a,0
-	dc.w 0x13c,0
-	dc.w 0x13e,0
+cop_ptr = Copper;
 
-CopBplP:
-	dc.w 0xe0,0		;playfield 1
-	dc.w 0xe2,0
-	dc.w 0xe8,0
-	dc.w 0xea,0
-	dc.w 0xf0,0
-	dc.w 0xf2,0
-CopSkyBplP:
-	dc.w 0xe4,0		;playfield 2
-	dc.w 0xe6,0
-	dc.w 0xec,0
-	dc.w 0xee,0
-	dc.w 0xf4,0
-	dc.w 0xf6,0
+	cop_w (0x1fc,0);		//			;slow fetch mode, AGA compatibility
+	cop_w (0x100,0x0200);
+	cop_w (0x08e,0x2c81);
+	cop_w (0x090,0x2cc1);
+	cop_w (0x092,0x38);
+	cop_w (0x094,0xd0);
+
+	cop_w (0x108,logobwid-logobpl);
+	cop_w (0x10a,skybwid-320/8);
+
+	cop_w (0x102,0);
+	cop_w (0x104,0x20);
+
+	cop_w (0x1a2,0x99b);	//			;sprite colors
+	cop_w (0x1a4,0xcce);
+	cop_w (0x1a6,0xfff);
+
+SprP = cop_ptr;
+
+	cop_w (0x120,0);
+	cop_w (0x122,0);
+	cop_w (0x124,0);
+	cop_w (0x126,0);
+	cop_w (0x128,0);
+	cop_w (0x12a,0);
+	cop_w (0x12c,0);
+	cop_w (0x12e,0);
+	cop_w (0x130,0);
+	cop_w (0x132,0);
+	cop_w (0x134,0);
+	cop_w (0x136,0);
+	cop_w (0x138,0);
+	cop_w (0x13a,0);
+	cop_w (0x13c,0);
+	cop_w (0x13e,0);
+
+CopBplP = cop_ptr;
+
+	cop_w (0xe0,0);	//		;playfield 1
+	cop_w (0xe2,0);
+	cop_w (0xe8,0);
+	cop_w (0xea,0);
+	cop_w (0xf0,0);
+	cop_w (0xf2,0);
+
+CopSkyBplP = cop_ptr;
+
+	cop_w (0xe4,0);	//		;playfield 2
+	cop_w (0xe6,0);
+	cop_w (0xec,0);
+	cop_w (0xee,0);
+	cop_w (0xf4,0);
+	cop_w (0xf6,0);
 		
-	dc.w 0x0180,logobgcol
-	dc.w 0x100,0x6600
-	dc.w 0x2c07,0xfffe
+	cop_w (0x0180,logobgcol);
+	cop_w (0x100,0x6600);
+	cop_w (0x2c07,0xfffe);
 
-LogoPal:
-	dc.w 0x0180,0x044f,0x0182,0x068e,0x0184,0x0adf,0x0186,0x0dff
-	dc.w 0x0188,0x09bf,0x018a,0x056d,0x018c,0x044b,0x018e,0x033a
-CloudPal:
-	dc.w 0x0192,0x066f,0x0194,0x077f,0x0196,0x088e
-	dc.w 0x0198,0x0aae,0x019a,0x0bbe,0x019c,0x0dde,0x019e,0x0eee
+LogoPal = cop_ptr;
 
-waitras1:
-	dc.w 0x8007,0xfffe
-	dc.w 0x180,0x558
-	dc.w 0x182,0
-	dc.w 0x184,0
-	dc.w 0x186,0
-	dc.w 0x188,0
-	dc.w 0x18a,0
-	dc.w 0x18c,0
-	dc.w 0x18e,0
-	dc.w 0x192,0
-	dc.w 0x194,0
-	dc.w 0x196,0
-	dc.w 0x198,0
-	dc.w 0x19a,0
-	dc.w 0x19c,0
-	dc.w 0x19e,0
-waitras2:
-	dc.w 0x8107,0xfffe
-	dc.w 0x180,0x99d
-	dc.w 0x182,0
-	dc.w 0x184,0
-	dc.w 0x186,0
-	dc.w 0x188,0
-	dc.w 0x18a,0
-	dc.w 0x18c,0
-	dc.w 0x18e,0
-	dc.w 0x192,0
-	dc.w 0x194,0
-	dc.w 0x196,0
-	dc.w 0x198,0
-	dc.w 0x19a,0
-	dc.w 0x19c,0
-	dc.w 0x19e,0
-waitras3:
-	dc.w 0x8207,0xfffe
-	dc.w 0x180,0xfff
-	dc.w 0x182,0
-	dc.w 0x184,0
-	dc.w 0x186,0
-	dc.w 0x188,0
-	dc.w 0x18a,0
-	dc.w 0x18c,0
-	dc.w 0x18e,0
-	dc.w 0x192,0
-	dc.w 0x194,0
-	dc.w 0x196,0
-	dc.w 0x198,0
-	dc.w 0x19a,0
-	dc.w 0x19c,0
-	dc.w 0x19e,0
-waitras4:
-	dc.w 0x8307,0xfffe
-	dc.w 0x180,0x99d
-	dc.w 0x182,0
-	dc.w 0x184,0
-	dc.w 0x186,0
-	dc.w 0x188,0
-	dc.w 0x18a,0
-	dc.w 0x18c,0
-	dc.w 0x18e,0
-	dc.w 0x192,0
-	dc.w 0x194,0
-	dc.w 0x196,0
-	dc.w 0x198,0
-	dc.w 0x19a,0
-	dc.w 0x19c,0
-	dc.w 0x19e,0
-waitras5:
-	dc.w 0x8407,0xfffe
-	dc.w 0x180,0x558
-	dc.w 0x182,0
-	dc.w 0x184,0
-	dc.w 0x186,0
-	dc.w 0x188,0
-	dc.w 0x18a,0
-	dc.w 0x18c,0
-	dc.w 0x18e,0
-	dc.w 0x192,0
-	dc.w 0x194,0
-	dc.w 0x196,0
-	dc.w 0x198,0
-	dc.w 0x19a,0
-	dc.w 0x19c,0
-	dc.w 0x19e,0
-waitras6:
-	dc.w 0x8507,0xfffe
-	dc.w 0x180,logobgcol
-	dc.w 0x182,0
-	dc.w 0x184,0
-	dc.w 0x186,0
-	dc.w 0x188,0
-	dc.w 0x18a,0
-	dc.w 0x18c,0
-	dc.w 0x18e,0
-	dc.w 0x192,0
-	dc.w 0x194,0
-	dc.w 0x196,0
-	dc.w 0x198,0
-	dc.w 0x19a,0
-	dc.w 0x19c,0
-	dc.w 0x19e,0
+	cop_w (0x0180,0x044f);
+	cop_w (0x0182,0x068e);
+	cop_w (0x0184,0x0adf);
+	cop_w (0x0186,0x0dff);
+	cop_w (0x0188,0x09bf);
+	cop_w (0x018a,0x056d);
+	cop_w (0x018c,0x044b);
+	cop_w (0x018e,0x033a);
 
-	dc.w 0x96bf,0xfffe
+CloudPal = cop_ptr;
+
+	cop_w (0x0192,0x066f);
+	cop_w (0x0194,0x077f);
+	cop_w (0x0196,0x088e);
+	cop_w (0x0198,0x0aae);
+	cop_w (0x019a,0x0bbe);
+	cop_w (0x019c,0x0dde);
+	cop_w (0x019e,0x0eee);
+
+waitras1 = cop_ptr;
+
+	cop_w (0x8007,0xfffe);
+	cop_w (0x180,0x558);
+	cop_w (0x182,0);
+	cop_w (0x184,0);
+	cop_w (0x186,0);
+	cop_w (0x188,0);
+	cop_w (0x18a,0);
+	cop_w (0x18c,0);
+	cop_w (0x18e,0);
+	cop_w (0x192,0);
+	cop_w (0x194,0);
+	cop_w (0x196,0);
+	cop_w (0x198,0);
+	cop_w (0x19a,0);
+	cop_w (0x19c,0);
+	cop_w (0x19e,0);
+
+waitras2 = cop_ptr;
+
+	cop_w (0x8107,0xfffe);
+	cop_w (0x180,0x99d);
+	cop_w (0x182,0);
+	cop_w (0x184,0);
+	cop_w (0x186,0);
+	cop_w (0x188,0);
+	cop_w (0x18a,0);
+	cop_w (0x18c,0);
+	cop_w (0x18e,0);
+	cop_w (0x192,0);
+	cop_w (0x194,0);
+	cop_w (0x196,0);
+	cop_w (0x198,0);
+	cop_w (0x19a,0);
+	cop_w (0x19c,0);
+	cop_w (0x19e,0);
+
+waitras3 = cop_ptr;
+
+	cop_w (0x8207,0xfffe);
+	cop_w (0x180,0xfff);
+	cop_w (0x182,0);
+	cop_w (0x184,0);
+	cop_w (0x186,0);
+	cop_w (0x188,0);
+	cop_w (0x18a,0);
+	cop_w (0x18c,0);
+	cop_w (0x18e,0);
+	cop_w (0x192,0);
+	cop_w (0x194,0);
+	cop_w (0x196,0);
+	cop_w (0x198,0);
+	cop_w (0x19a,0);
+	cop_w (0x19c,0);
+	cop_w (0x19e,0);
+
+waitras4 = cop_ptr;
+
+	cop_w (0x8307,0xfffe);
+	cop_w (0x180,0x99d);
+	cop_w (0x182,0);
+	cop_w (0x184,0);
+	cop_w (0x186,0);
+	cop_w (0x188,0);
+	cop_w (0x18a,0);
+	cop_w (0x18c,0);
+	cop_w (0x18e,0);
+	cop_w (0x192,0);
+	cop_w (0x194,0);
+	cop_w (0x196,0);
+	cop_w (0x198,0);
+	cop_w (0x19a,0);
+	cop_w (0x19c,0);
+	cop_w (0x19e,0);
+
+waitras5 = cop_ptr;
+
+	cop_w (0x8407,0xfffe);
+	cop_w (0x180,0x558);
+	cop_w (0x182,0);
+	cop_w (0x184,0);
+	cop_w (0x186,0);
+	cop_w (0x188,0);
+	cop_w (0x18a,0);
+	cop_w (0x18c,0);
+	cop_w (0x18e,0);
+	cop_w (0x192,0);
+	cop_w (0x194,0);
+	cop_w (0x196,0);
+	cop_w (0x198,0);
+	cop_w (0x19a,0);
+	cop_w (0x19c,0);
+	cop_w (0x19e,0);
+
+waitras6 = cop_ptr;
+
+	cop_w (0x8507,0xfffe);
+	cop_w (0x180,logobgcol);
+	cop_w (0x182,0);
+	cop_w (0x184,0);
+	cop_w (0x186,0);
+	cop_w (0x188,0);
+	cop_w (0x18a,0);
+	cop_w (0x18c,0);
+	cop_w (0x18e,0);
+	cop_w (0x192,0);
+	cop_w (0x194,0);
+	cop_w (0x196,0);
+	cop_w (0x198,0);
+	cop_w (0x19a,0);
+	cop_w (0x19c,0);
+	cop_w (0x19e,0);
+
+	cop_w (0x96bf,0xfffe);
+}
 
 FontPalP:
 	dc.w 0x0182,0x0ddd,0x0184,0x0833,0x0186,0x0334
