@@ -12,8 +12,51 @@
 */
 //    ---  screen buffer dimensions  ---
 
-uint32 d0,d1,d2,d3,d4,d5,d6,d7;
-uint32 a0,a1,a2,a3,a4,a5,a6,a7;
+union reg_u
+{
+	uint32 b32;
+	struct {
+		union
+		{
+			uint16 hw;
+			struct
+			{
+				uint8 b3;
+				uint8 b2;
+			};
+		};
+		union
+		{
+			uint16 lw;
+			struct
+			{
+				uint8 b1;
+				uint8 b0;
+			};
+		};
+	};
+};
+
+union reg_u D0,D1,D2,D3,D4,D5,D6,D7;
+union reg_u A0,A1,A2,A3,A4,A5,A6,A7;
+
+#define d0 D0.b32
+#define d1 D1.b32
+#define d2 D2.b32
+#define d3 D3.b32
+#define d4 D4.b32
+#define d5 D5.b32
+#define d6 D6.b32
+#define d7 D7.b32
+
+#define a0 A0.b32
+#define a1 A1.b32
+#define a2 A2.b32
+#define a3 A3.b32
+#define a4 A4.b32
+#define a5 A5.b32
+#define a6 A6.b32
+#define a7 A7.b32
 
 struct cloud
 {
@@ -46,11 +89,11 @@ uint16	Cmd_StopCount=0;							//Cmd_StopCount:
 												//	dc.w 0
 #define DEMO "tut46.c"
 
-char *ScrollText =
+char ScrollText[] = 
 	"HELLO, AMIGA CODERS! THIS IS PHOTON PRESENTING THE "
-	"   // ASMSKOOL",1," DEMO " FROM THE AMIGA HARDWARE "
+	"   // ASMSKOOL \x01" DEMO " FROM THE AMIGA HARDWARE "
 	"PROGRAMMING SERIES ON YOUTUBE. IT'S A SIMPLE "
-	"DEMO WITH A        -BOUNC!NG-",2,180,"        SCROLLER, "
+//	"DEMO WITH A        -BOUNC!NG-\x02\xB4        SCROLLER, "
 	"MOVING RASTERBAR, BOB PARALLAX, AND SPRITE STARFIELD.        "
 	"GREETINGS TO        SCOOPEX MEMBERS AND ALL DEMOSCENE FRIENDS, "
 	"EAB FRIENDS, AND SPECIAL SHOUTS TO TONI, JENS, BIFAT, BONEFISH, "
@@ -58,8 +101,9 @@ char *ScrollText =
 	"TOMAZ KRAGELJ, MCGEEZER AND ANTIRIAD        I HOPE WE ALL STAY "
 	"SAFE, AND ENJOY THE LAST DAYS OF THIS GREAT SUMMER!"
 	"                                                                                                      "
-	1,' ';
+	"\x01 " ;
 
+extern char FontTbl[];
 
 char *ScrollPtr = ScrollText;
 
@@ -114,19 +158,22 @@ uint32 logoh		=99;
 #define cloudcount	10
 #define cloudstructsize	18
 
+void Init();
 void Main();
 void PlotChar();
+void PlotBob();
+void Scrollit();
 
 //********************  MACROS  ********************
 
 #define logocolors						\
-	dc.w 0x068e,0x0adf,0x0dff				\
-	dc.w 0x09bf,0x056d,0x044b,0x033a		\
+	 0x068e,0x0adf,0x0dff				\
+	, 0x09bf,0x056d,0x044b,0x033a		\
 
 
 #define cloudcolors						\
-	dc.w 0x066f,0x077f,0x088e				\
-	dc.w 0x0aae,0x0bbe,0x0dde,0x0eee		\
+	 0x066f,0x077f,0x088e				\
+	, 0x0aae,0x0bbe,0x0dde,0x0eee		\
 
 /*
 WAITBLIT:macro
@@ -202,6 +249,8 @@ void Main()
 uint8 *CloudCoordsLP;
 uint8 *StarSpr;
 uint8 *StarSpr2;
+
+uint8 *Font,FontE;
 
 #define bin8(b7,b6,b5,b4,b3,b2,b1,b0) ((b7<<7) | (b6 <<6) | (b5 <<5) | (b4<<4) | (b3 <<3) | (b2<<2) | (b1<<1) | (b0))
 
@@ -567,7 +616,7 @@ void VBint()			//					;Blank template VERTB interrupt
 
 void PlotChar()										//PlotChar:	;a0=scrollptr
 {												//;	movem.l d0-a6,-(sp)
-	a0 = ScrollPtr;									//	move.l ScrollPtr(PC),a0
+	a0 = (uint32) ScrollPtr;									//	move.l ScrollPtr(PC),a0
 												//	lea 0xdff000,a6
 
 												//	moveq #0,d0
@@ -584,7 +633,7 @@ void PlotChar()										//PlotChar:	;a0=scrollptr
 												//	bne.s .notogglebounce
 				Cmd_Bounce=~Cmd_Bounce;			//	not.b Cmd_Bounce
 				BounceYspeed = 16;				//	move.w #16,BounceYspeed
-				d0 = ld_b(a0);	a0++:				//	bra.s .readnext
+				d0 = ld_b(a0);	a0++;				//	bra.s .readnext
 				break;							
 												//.notogglebounce:
 			case	2:								//	cmp.b #2,d0
@@ -597,22 +646,22 @@ void PlotChar()										//PlotChar:	;a0=scrollptr
 												//.stop:
 			default:
 				
-				a0 = ScrollText;
-				d0 = ld_b(a0);	a0++:										
-				break;											
+				a0 = (uint32) ScrollText;
+				d0 = ld_b(a0);	a0++;
+				break;
 
-		}										
+		}
 	}											//.char:
 
 	
-	ScrollPtr = a0;									//	move.l a0,ScrollPtr
-	LastChar = d0;									//	move.b d0,LastChar
+	ScrollPtr = (void *) a0;							//	move.l a0,ScrollPtr
+	LastChar =  d0;									//	move.b d0,LastChar
 
 	d0 -= 32;										//	sub.w #32,d0
-	a0 = FontTbl;									//	lea FontTbl(PC),a0
+	a0 = (uint32) FontTbl;							//	lea FontTbl(PC),a0
 	d0 = ld_b(a0+d0);								//	move.b (a0,d0.w),d0
 	d0 /= 9;										//	divu #9,d0			;row
-	d1 = d0 >> 16;								//	move.l d0,d1
+	d1 = D0.hw ;								//	move.l d0,d1
 												//	swap d1				;remainder (column)
 
 	d0 *= row;									//	mulu #row,d0
@@ -641,117 +690,131 @@ void PlotChar()										//PlotChar:	;a0=scrollptr
 ;D	Destination playfield
 */
 
-PlotBob:		;d0-d3/a0-a2=x,y,width,h,src,dest,mask,BLTCON0+1.l
-	movem.l d0-d3/d5/a1,-(sp)
-	add.w #15,d2			;round up
-	lsr.w #4,d2			;word width
+void PlotBob()										//PlotBob:		;d0-d3/a0-a2=x,y,width,h,src,dest,mask,BLTCON0+1.l
+{												//	movem.l d0-d3/d5/a1,-(sp)
+	D2.lw+=15;									//	add.w #15,d2			;round up
+	D2.lw >>=4;									//	lsr.w #4,d2			;word width
 
-	move.w d0,d5			;x position
-	asr.w #4,d5			;in words
-	add.w d5,d5			;*2=byte offset into destination
+	D5.lw = D0.lw;									//	move.w d0,d5			;x position
+	d5 >>= 4;									//	asr.w #4,d5			;in words
+	D5.lw += D5.lw;								//	add.w d5,d5			;*2=byte offset into destination
 
-	muls #skybwid,d1		;y offset
-	ext.l d5
-	add.l d5,d1
-	add.l d1,a1			;dest address
+	d1 *= skybwid;									//	muls #skybwid,d1		;y offset
+												//	ext.l d5
 
-	and.w #0xf,d0			;shift nibble
-	ror.w #4,d0			;to top nibble
+	d5 = D5.lw | ((D5.lw & 0x8000) ? 0xFFFF0000 : 0x00000000);
 
-	move.w d0,d5			;and put in
-	swap d5				;both words
-	move.w d0,d5			;of BLTCON
+	d1+=d5;										//	add.l d5,d1
+	a1+=d1;										//	add.l d1,a1			;dest address
+
+	d0 &= 0xf;									//	and.w #0xf,d0			;shift nibble
+	d0 = ((d0 & 0xF) << 12) |  (d0 >> 4) ;				//	ror.w #4,d0			;to top nibble
+
+	d5 = d0;										//	move.w d0,d5			;and put in
+	d5 = (D5.hw >> 16) | (D5.lw << 16);				//	swap d5				;both words
+
+	d5 = d5 | d0;									//	move.w d0,d5			;of BLTCON
 	
-	or.l d4,d5
+												//	or.l d4,d5
 	
-	mulu #3*64,d3			;calculate blit size
-	add.w d2,d3
+												//	mulu #3*64,d3			;calculate blit size
+												//	add.w d2,d3
 
-	add.w d2,d2			;w/8
-	neg.w d2
-	add.w #SkyBpl,d2		;=SkyBpl-w/8
+												//	add.w d2,d2			;w/8
+												//	neg.w d2
+												//	add.w #SkyBpl,d2		;=SkyBpl-w/8
 
-	WAITBLIT
+												//	WAITBLIT
 
-	move.l d5,BLTCON0(a6)
-	move.l #0xffffffff,BLTAFWM(a6)
-	move.l a2,BLTAPTH(a6)
-	move.l a0,BLTBPTH(a6)
-	move.l a1,BLTCPTH(a6)
-	move.l a1,BLTDPTH(a6)
-	clr.l BLTBMOD(a6)
-	move.w d2,BLTCMOD(a6)
-	move.w d2,BLTDMOD(a6)
-	move.w d3,BLTSIZE(a6)
-	movem.l (sp)+,d0-d3/d5/a1
-	rts
+												//	move.l d5,BLTCON0(a6)
+												//	move.l #0xffffffff,BLTAFWM(a6)
+												//	move.l a2,BLTAPTH(a6)
+												//	move.l a0,BLTBPTH(a6)
+												//	move.l a1,BLTCPTH(a6)
+												//	move.l a1,BLTDPTH(a6)
+												//	clr.l BLTBMOD(a6)
+												//	move.w d2,BLTCMOD(a6)
+												//	move.w d2,BLTDMOD(a6)
+												//	move.w d3,BLTSIZE(a6)
+												//	movem.l (sp)+,d0-d3/d5/a1
+}												//	rts
 
 
-Scrollit:
-//    ---  scroll!  ---
-bltoffs	=plotY*ScrBpl*3
+void Scrollit()										//Scrollit:
+{			//    ---  scroll!  ---
+												//bltoffs	=plotY*ScrBpl*3
+												//blth	=20
+												//bltw	=w/16
+												//bltskip	=0				;modulo
+												//brcorner=blth*ScrBpl*3-2
 
-blth	=20
-bltw	=w/16
-bltskip	=0				;modulo
-brcorner=blth*ScrBpl*3-2
+#define bltoffs	(plotY*ScrBpl*3)
+#define blth	20
+#define bltw	(w/16)
+#define bltskip	0
+#define brcorner (blth*ScrBpl*3-2)
 
-;	movem.l d0-a6,-(sp)
-	lea 0xdff000,a6
-	WAITBLIT
-	move.l #0x49f00002,BLTCON0(a6)
-	move.l #0xffffffff,BLTAFWM(a6)
-	move.l #Screen+bltoffs+brcorner,BLTAPTH(a6)
-	move.l #Screen+bltoffs+brcorner,BLTDPTH(a6)
-	move.w #bltskip,BLTAMOD(a6)
-	move.w #bltskip,BLTDMOD(a6)
+												//;	movem.l d0-a6,-(sp)
+												//	lea 0xdff000,a6
+	WAITBLIT();									//	WAITBLIT
+												//	move.l #0x49f00002,BLTCON0(a6)
+												//	move.l #0xffffffff,BLTAFWM(a6)
+												//	move.l #Screen+bltoffs+brcorner,BLTAPTH(a6)
+	// add blitter.library here.											//	move.l #Screen+bltoffs+brcorner,BLTDPTH(a6)
+												//	move.w #bltskip,BLTAMOD(a6)
+												//	move.w #bltskip,BLTDMOD(a6)
 
-	move.w #blth*3*64+bltw,BLTSIZE(a6)
-;	movem.l (sp)+,d0-a6
-	rts
+												//	move.w #blth*3*64+bltw,BLTSIZE(a6)
+												//;	movem.l (sp)+,d0-a6
+}												//	rts
 
-Init:
-	movem.l d0-a6,-(sp)
+void Init()											//Init:
+{												//	movem.l d0-a6,-(sp)
 
-	moveq #0,d1
-	lea Screen,a1
-	move.w #bplsize*fontbpls/2-1,d0
-.l:	move.w #0,(a1)+
-	addq.w #1,d1
-	dbf d0,.l
+	d1=0;										//	moveq #0,d1
+	a1 = Screen;									//	lea Screen,a1
+	d0 = bplsize*fontbpls/2-1;						//	move.w #bplsize*fontbpls/2-1,d0
+	for (;d0;d0--)									//.l:	move.w #0,(a1)+
+	{
+		st_w(a0,0);	a1+=2;
+		D1.lw += 1;								//	addq.w #1,d1
+	}											//	dbf d0,.l
 
-	lea Sky,a1
-	lea Sky2,a2		;clear 2nd buffer also
-	lea SkyBufferL(PC),a3
-	move.l a1,(a3)+
-	move.l a2,(a3)+		;Double-buffer list initialized
+	a1 = Sky;										//	lea Sky,a1
+	a2 = Sky2;									//	lea Sky2,a2		;clear 2nd buffer also
+	a3 = SkyBufferL;								//	lea SkyBufferL(PC),a3
+	st_l(a3,a1); a3+=4;								//	move.l a1,(a3)+
+	st_l(a3,a2); a3+=4;								//	move.l a2,(a3)+		;Double-buffer list initialized
 
-	lea Sky,a1
-	lea Sky2,a2		;clear 2nd buffer also
+	a1 = Sky;										//	lea Sky,a1
+	s2 = Sky2;									//	lea Sky2,a2		;clear 2nd buffer also
 
-	moveq #0,d0		;clear buffers
-	move.w #(SkyE-Sky)/8-1,d7
-.l7:	move.l d0,(a1)+
-	move.l d0,(a1)+
-	move.l d0,(a2)+
-	move.l d0,(a2)+
-	dbf d7,.l7
+	d0=0;										//	moveq #0,d0		;clear buffers
+	d7= (SkyE-Sky)/8-1;								//	move.w #(SkyE-Sky)/8-1,d7
+
+	for (;d7;d7--)
+	{
+		st_l(a1,d0); a1+=4;							//.l7:	move.l d0,(a1)+
+		st_l(a1,d0); a1+=4;							//	move.l d0,(a1)+
+		st_l(a2,d0); a2+=4;							//	move.l d0,(a2)+
+		st_l(a2,d0); a2+=4;							//	move.l d0,(a2)+
+	}											//	dbf d7,.l7
 
 //    *--- playfield 1 ptrs ---*
 
-	lea Logo,a0		;ptr to first bitplane of logo
-	lea CopBplP,a1		;where to poke the bitplane pointer words.
-	move #3-1,d0
-.bpll:
-	move.l a0,d1
-	swap d1
-	move.w d1,2(a1)		;hi word
-	swap d1
-	move.w d1,6(a1)		;lo word
+	a0 = Logo;									//	lea Logo,a0		;ptr to first bitplane of logo
+	a1 = CopBplP;									//	lea CopBplP,a1		;where to poke the bitplane pointer words.
+	for(d0=3-1;d0;d0--)								//	move #3-1,d0
+	{											//.bpll:
+		d1 = a0;									//	move.l a0,d1
+		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
+		st_w(a1+2,D1.lw);							//	move.w d1,2(a1)		;hi word
+		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
+		st_w(a1+6,D1.lw);							//	move.w d1,6(a1)		;lo word
 
-	addq #8,a1		;point to next bpl to poke in copper
-	lea logobpl(a0),a0
-	dbf d0,.bpll
+		a1 += 8;									//	addq #8,a1		;point to next bpl to poke in copper
+		a0 += logobpl;								//	lea logobpl(a0),a0
+	}											//	dbf d0,.bpll
 
 //    *--- playfield 2 ptrs ---*
 
@@ -1221,18 +1284,18 @@ uint16	BarInFront[] =
 	cloudcolors
  };
 
-FontTbl:
-	dc.b 43,38
-	dcb.b 5,0
-	dc.b 42
-	dcb.b 4,0
-	dc.b 37,40,36,41
-	dc.b 26,27,28,29,30,31,32,33,34,35
-	dcb.b 5,0
-	dc.b 39,0
-	dc.b 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21
-	dc.b 22,23,24,25
-	EVEN
+char FontTbl[]={
+	 43,38
+	,0,0,0,0,0							// dcb.b 5,0
+	, 42
+	,0,0,0,0							// dcb.b 4,0
+	, 37,40,36,41
+	, 26,27,28,29,30,31,32,33,34,35
+	,0,0,0,0,0							// dcb.b 5,0
+	, 39,0
+	, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21
+	, 22,23,24,25
+	};
 
 BounceY:
 	dc.w 1*8
@@ -1902,32 +1965,15 @@ ScrBplP:
 	dc.w 0xffff,0xfffe
 CopperE:
 
-Font:
-	INCBIN "media/FastCarFont.284x100x3"
-FontE:
 
-Cloud:
-	INCBIN "media/Cloud.112x38x3.raw"
-CloudE:
-
-Cloud2:
-	INCBIN "media/Cloud.64x24x3.raw"
-Cloud2E:
-
-Cloud3:
-	INCBIN "media/Cloud.48x15x3.raw"
-Cloud3E:
-
-CloudMask:
-	INCBIN "media/Cloud.112x38x3.masks.raw"
-CloudMaskE:
-
+	load_raw("media/FastCarFont.284x100x3",&Font,&FontE);
+	load_raw("media/Cloud.112x38x3.raw",&Cloud,&CloudE);
+	load_raw("media/Cloud.64x24x3.raw",&Cloud2,&Cloud2E);
+	load_raw("media/Cloud.48x15x3.raw",&Cloud3,&Cloud3E);
+	load_raw("media/Cloud.112x38x3.masks.raw",&CloudMask,&CloudMaskE);
 	load_raw("media/Cloud.64x24x3.masks.raw", 0, &Cloud2Mask, &Cloud2MaskE);
-
 	load_raw("media/Cloud.48x15x3.masks.raw", 0, &Cloud3Mask, &Cloud3MaskE);
-
 	load_raw("P61.new_ditty", 0, &Module1, &Module1E); // usecode 0xc00b43b
-
 	load_raw("sky3centered.raw", (logobwid*6), &Logo, &LogoE);
 
 
