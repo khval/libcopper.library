@@ -38,13 +38,31 @@ uint32 SkyBufferL[]={0,0};										//	SkyBufferL:
 															//		dc.l 0
 uint32 *SkyBufferLE=SkyBufferL + sizeof(SkyBufferL)/sizeof(uint32);		//	SkyBufferLE:
 
-
 uint8		LastChar=0;								//LastChar:
 												//	dc.b 0
 uint8		Cmd_Bounce=0;							//Cmd_Bounce:
 												//	dc.b 0
 uint16	Cmd_StopCount=0;							//Cmd_StopCount:
 												//	dc.w 0
+#define DEMO "tut46.c"
+
+char *ScrollText =
+	"HELLO, AMIGA CODERS! THIS IS PHOTON PRESENTING THE "
+	"   // ASMSKOOL",1," DEMO " FROM THE AMIGA HARDWARE "
+	"PROGRAMMING SERIES ON YOUTUBE. IT'S A SIMPLE "
+	"DEMO WITH A        -BOUNC!NG-",2,180,"        SCROLLER, "
+	"MOVING RASTERBAR, BOB PARALLAX, AND SPRITE STARFIELD.        "
+	"GREETINGS TO        SCOOPEX MEMBERS AND ALL DEMOSCENE FRIENDS, "
+	"EAB FRIENDS, AND SPECIAL SHOUTS TO TONI, JENS, BIFAT, BONEFISH, "
+	"HIGHPUFF, MAGNUS T, PHAZE101, WEI-JU WU, DUTCH RETRO GUY, JEL, "
+	"TOMAZ KRAGELJ, MCGEEZER AND ANTIRIAD        I HOPE WE ALL STAY "
+	"SAFE, AND ENJOY THE LAST DAYS OF THIS GREAT SUMMER!"
+	"                                                                                                      "
+	1,' ';
+
+
+char *ScrollPtr = ScrollText;
+
 extern uint16	BarBehind[];
 extern uint16	BarInFront[];
 
@@ -97,6 +115,7 @@ uint32 logoh		=99;
 #define cloudstructsize	18
 
 void Main();
+void PlotChar();
 
 //********************  MACROS  ********************
 
@@ -382,7 +401,7 @@ void Part1()
 							//	lea Sine,a0
 	d6 = SineCtr;				//	move.w SineCtr,d6
 	d7 = 0x4d-6+37;			//	move.w #0x4d-6+37,d7
-	d7 = a0 + d6;				//	add.w (a0,d6.w),d7
+	d7 += ld_w(a0 + d6);		//	add.w (a0,d6.w),d7
 
 	d6+=2;					//	addq.w #2,d6
 	if (d6>SineEnd-Sine)			//	cmp.w #SineEnd-Sine,d6
@@ -470,122 +489,149 @@ void Part1()
 }
 
 
-VBint:					;Blank template VERTB interrupt
-	movem.l d0-a6,-(sp)		;Save used registers
-	lea 0xdff000,a6
-	btst #5,0x1f(a6)			;INTREQR check if it's our vertb int.
-	beq.s .notvb
+void VBint()			//					;Blank template VERTB interrupt
+{
+	// --- will call this on every.
+
+							//	movem.l d0-a6,-(sp)		;Save used registers
+			;				//	lea 0xdff000,a6
+							//	btst #5,0x1f(a6)			;INTREQR check if it's our vertb int.
+							//	beq.s .notvb
 
 //    *--- double buffering for the clouds ---*
 
-	movem.l SkyBufferL(PC),a0-a1
-	exg a0,a1
-	movem.l a0-a1,SkyBufferL
-
-	movem.l CloudCoordsLP(PC),a0-a1
-	exg a0,a1
-	movem.l a0-a1,CloudCoordsLP
+							//	movem.l SkyBufferL(PC),a0-a1
+	a0 = SkyBufferL[0];
+	a1 = SkyBufferL[1];
+							//	exg a0,a1
+							//	movem.l a0-a1,SkyBufferL
+	SkyBufferL[0] = a1;
+	SkyBufferL[1] = a0;
+							//	movem.l CloudCoordsLP(PC),a0-a1
+	a0 = CloudCoordsLP[0];
+	a1 = CloudCoordsLP[1];
+							//	exg a0,a1
+							//	movem.l a0-a1,CloudCoordsLP
+	CloudCoordsLP[0] = a1;
+	CloudCoordsLP[1] = a0;
 
 //    *--- playfield 2 ptrs ---*
+							//	move.l SkyBufferL(PC),a0		;ptr to first bitplane of logo
+	a0 = SkyBufferL[0];
+							//	lea CopSkyBplP,a1	;where to poke the bitplane pointer words.
+	a1 = (uint32) CopSkyBplP;
+							//	lea 14(a0),a0
+	a0 = ld_l(14+a0);
+							//	move #3-1,d0
+	for(d0 = 3-1;d0;d0--)
+	{
+							//.bpll2:
+		d1 = a0;				//	move.l a0,d1
+							//	swap d1
+		st_w(2+a1,d1 >> 16);	//	move.w d1,2(a1)		;hi word
+							//	swap d1
+		st_w(2+a1,d1 & 0xFFFF);	//	move.w d1,6(a1)		;lo word
 
-	move.l SkyBufferL(PC),a0		;ptr to first bitplane of logo
-	lea CopSkyBplP,a1	;where to poke the bitplane pointer words.
-	lea 14(a0),a0
-	move #3-1,d0
-.bpll2:
-	move.l a0,d1
-	swap d1
-	move.w d1,2(a1)		;hi word
-	swap d1
-	move.w d1,6(a1)		;lo word
+		a1+=8;				//	addq #8,a1		;point to next bpl to poke in copper
+		a0 = skybpl+a0;		//	lea skybpl(a0),a0
+							//	dbf d0,.bpll2
+	}
 
-	addq #8,a1		;point to next bpl to poke in copper
-	lea skybpl(a0),a0
-	dbf d0,.bpll2
+	Part1();					//	bsr.w Part1
 
-	bsr.w Part1
+							//	IFD Measure
+#ifdef Measure
+							//	move.w #0x722,0x180(a6)
+							//	move.l 4(a6),d0
+							//	lsr.l #8,d0
+							//	and.w #512-1,d0
+							//	cmp.w #0x130,d0
+							//	bhs.s .nomax
+							//	cmp.w MaxVpos(PC),d0
+							//	blo.s .nomax
+							//	move.w d0,MaxVpos
+							//.nomax:
+							//	ENDC
+#endif
 
-	IFD Measure
-	move.w #0x722,0x180(a6)
-	move.l 4(a6),d0
-	lsr.l #8,d0
-	and.w #512-1,d0
-	cmp.w #0x130,d0
-	bhs.s .nomax
-	cmp.w MaxVpos(PC),d0
-	blo.s .nomax
-	move.w d0,MaxVpos
-.nomax:
-	ENDC
-
-	moveq #0x20,d0			;poll irq bit
-	move.w d0,0x9c(a6)		;0xdff09c=INTREQ
-	move.w d0,0x9c(a6)
-.notvb:
-	movem.l (sp)+,d0-a6		;restore
-	rte
+	d0 = 0x20;				//	moveq #0x20,d0			;poll irq bit
+							//	move.w d0,0x9c(a6)		;0xdff09c=INTREQ
+							//	move.w d0,0x9c(a6)
+							//.notvb:
+							//	movem.l (sp)+,d0-a6		;restore
+							//	rte
+}
 	
-row	=288*3*20/8
-col	=4
+#define row	(288*3*20/8)
+#define col	4
 
-PlotChar:	;a0=scrollptr
-;	movem.l d0-a6,-(sp)
-	move.l ScrollPtr(PC),a0
-	lea 0xdff000,a6
+void PlotChar()										//PlotChar:	;a0=scrollptr
+{												//;	movem.l d0-a6,-(sp)
+	a0 = ScrollPtr;									//	move.l ScrollPtr(PC),a0
+												//	lea 0xdff000,a6
 
-	moveq #0,d0
-	move.b (a0)+,d0			;ASCII value
-	cmp.b #32,d0
-	bhs.s .char
-.commands:
-	tst.b d0
-	bne.s .nowraptext
-	lea ScrollText(PC),a0
-	bra.s .readnext
-.nowraptext:
-	cmp.b #1,d0
-	bne.s .notogglebounce
-	not.b Cmd_Bounce
-	move.w #16,BounceYspeed
-	bra.s .readnext
-.notogglebounce:
-	cmp.b #2,d0
-	bne.s .stop
-	moveq #0,d0
-	move.b (a0)+,d0
-	move.w d0,Cmd_StopCount
-.readnext:
-	move.b (a0)+,d0
-.stop:
-.char:
+												//	moveq #0,d0
+	d0 = ld_b(a0); a0++;							//	move.b (a0)+,d0			;ASCII value
+	if (32==d0)									//	cmp.b #32,d0
+	{											//	bhs.s .char
+												//.commands:
+		switch (d0)								//	tst.b d0
+		{										//	bne.s .nowraptext
+												//	lea ScrollText(PC),a0
+												//	bra.s .readnext
+												//.nowraptext:
+			case 1:								//	cmp.b #1,d0
+												//	bne.s .notogglebounce
+				Cmd_Bounce=~Cmd_Bounce;			//	not.b Cmd_Bounce
+				BounceYspeed = 16;				//	move.w #16,BounceYspeed
+				d0 = ld_b(a0);	a0++:				//	bra.s .readnext
+				break;							
+												//.notogglebounce:
+			case	2:								//	cmp.b #2,d0
+												//	bne.s .stop
+												//	moveq #0,d0
+				d0 = ld_b(a0); a0++;				//	move.b (a0)+,d0
+				Cmd_StopCount = d0;				//	move.w d0,Cmd_StopCount
+				break;							//.readnext:
+												//	move.b (a0)+,d0
+												//.stop:
+			default:
+				
+				a0 = ScrollText;
+				d0 = ld_b(a0);	a0++:										
+				break;											
+
+		}										
+	}											//.char:
+
 	
-	move.l a0,ScrollPtr
-	move.b d0,LastChar
+	ScrollPtr = a0;									//	move.l a0,ScrollPtr
+	LastChar = d0;									//	move.b d0,LastChar
 
-	sub.w #32,d0
-	lea FontTbl(PC),a0
-	move.b (a0,d0.w),d0
-	divu #9,d0			;row
-	move.l d0,d1
-	swap d1				;remainder (column)
+	d0 -= 32;										//	sub.w #32,d0
+	a0 = FontTbl;									//	lea FontTbl(PC),a0
+	d0 = ld_b(a0+d0);								//	move.b (a0,d0.w),d0
+	d0 /= 9;										//	divu #9,d0			;row
+	d1 = d0 >> 16;								//	move.l d0,d1
+												//	swap d1				;remainder (column)
 
-	mulu #row,d0
-	mulu #col,d1
+	d0 *= row;									//	mulu #row,d0
+	d1 *= col;										//	mulu #col,d1
 
-	add.l d1,d0			;offset into font bitmap
-	add.l #Font,d0
+	d0 += d1;									//	add.l d1,d0			;offset into font bitmap
+	d0 += Font;									//	add.l #Font,d0
 
-	WAITBLIT
-	move.l #0x09f00000,BLTCON0(a6)
-	move.l #0xffffffff,BLTAFWM(a6)
-	move.l d0,BLTAPTH(a6)
-	move.l #Screen+ScrBpl*3*plotY+plotX/8,BLTDPTH(a6)
-	move.w #FontBpl-col,BLTAMOD(a6)
-	move.w #ScrBpl-col,BLTDMOD(a6)
+	WAITBLIT();									//	WAITBLIT
+												//	move.l #0x09f00000,BLTCON0(a6)
+												//	move.l #0xffffffff,BLTAFWM(a6)
+												//	move.l d0,BLTAPTH(a6)
+												//	move.l #Screen+ScrBpl*3*plotY+plotX/8,BLTDPTH(a6)
+	// Add Blitter.library here!!!						//	move.w #FontBpl-col,BLTAMOD(a6)
+												//	move.w #ScrBpl-col,BLTDMOD(a6)
 
-	move.w #20*3*64+2,BLTSIZE(a6)
-;	movem.l (sp)+,d0-a6
-	rts
+												//	move.w #20*3*64+2,BLTSIZE(a6)
+												//;	movem.l (sp)+,d0-a6
+}												//	rts
 
 /*
 ;Chan	Function
@@ -1390,22 +1436,7 @@ gfxname:
 
 
 
-ScrollPtr:
-	dc.l ScrollText
-ScrollText:
-	dc.b "HELLO, AMIGA CODERS! THIS IS PHOTON PRESENTING THE "
-	dc.b "   // ASMSKOOL",1," DEMO //   " FROM THE AMIGA HARDWARE "
-	dc.b "PROGRAMMING SERIES ON YOUTUBE. IT'S A SIMPLE "
-	dc.b "DEMO WITH A        -BOUNC!NG-",2,180,"        SCROLLER, "
-	dc.b "MOVING RASTERBAR, BOB PARALLAX, AND SPRITE STARFIELD.        "
-	dc.b "GREETINGS TO        SCOOPEX MEMBERS AND ALL DEMOSCENE FRIENDS, "
-	dc.b "EAB FRIENDS, AND SPECIAL SHOUTS TO TONI, JENS, BIFAT, BONEFISH, "
-	dc.b "HIGHPUFF, MAGNUS T, PHAZE101, WEI-JU WU, DUTCH RETRO GUY, JEL, "
-	dc.b "TOMAZ KRAGELJ, MCGEEZER AND ANTIRIAD        I HOPE WE ALL STAY "
-	dc.b "SAFE, AND ENJOY THE LAST DAYS OF THIS GREAT SUMMER!"
 
-	dcb.b w/32,' '
-	dc.b 1,' '
 
 
 
