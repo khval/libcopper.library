@@ -89,6 +89,15 @@ uint16	Cmd_StopCount=0;							//Cmd_StopCount:
 												//	dc.w 0
 #define DEMO "tut46.c"
 
+uint32 NullSpr[] = {
+	 0x2a20,0x2b00
+	, 0,0
+	, 0,0 };
+
+uint32 FontPalP[]={
+	  0x0182,0x0ddd,0x0184,0x0833,0x0186,0x0334
+	, 0x0188,0x0a88,0x018a,0x099a,0x018c,0x0556,0x018e,0x0633};
+
 char ScrollText[] = 
 	"HELLO, AMIGA CODERS! THIS IS PHOTON PRESENTING THE "
 	"   // ASMSKOOL \x01" DEMO " FROM THE AMIGA HARDWARE "
@@ -110,18 +119,38 @@ char *ScrollPtr = ScrollText;
 extern uint16	BarBehind[];
 extern uint16	BarInFront[];
 
-	uint16 *Copper;
-	uint16 *SprP;
-	uint16 *CopBplP;
-	uint16 *CopSkyBplP;
-	uint16 *LogoPal;
-	uint16 *CloudPal;
-	uint16 *waitras1;
-	uint16 *waitras2;
-	uint16 *waitras3;
-	uint16 *waitras4;
-	uint16 *waitras5;
-	uint16 *waitras6;
+uint8 *Logo;
+uint8 *LogoE;
+uint8 *Screen;
+uint8 *ScreenE;
+uint8 *Sky;
+uint8 *SkyE;
+uint8 *Sky2;
+uint8 *Sky2E;
+
+uint8 *Cloud;
+uint8 *CloudE;
+uint8 *Cloud2;
+uint8 *Cloud2E;
+uint8 *Cloud3E;
+uint8 *CloudMask;
+uint8 *CloudMaskE;
+uint8 *Cloud2Mask;
+uint8 *Cloud2MaskE;
+uint8 *Cloud3MaskE;
+
+uint16 *Copper;
+uint16 *SprP;
+uint16 *CopBplP;
+uint16 *CopSkyBplP;
+uint16 *LogoPal;
+uint16 *CloudPal;
+uint16 *waitras1;
+uint16 *waitras2;
+uint16 *waitras3;
+uint16 *waitras4;
+uint16 *waitras5;
+uint16 *waitras6;
 
 uint8 *Module1;
 
@@ -139,8 +168,8 @@ uint32 logoh		=99;
 #define logobpl	(logow/8)
 #define logobwid	(logobpl*3)
 
-#define skybpl		(320/8+14)
-#define skybwid	(skybpl*3)
+#define SkyBpl		(320/8+14)
+#define skybwid	(SkyBpl*3)
 #define skyh		220
 
 //    ---  font dimensions  ---
@@ -414,7 +443,7 @@ void Part1()
 
 //    *--- plot clouds ---*
 
-	a1 = (uint32) SkyBufferL;		//	move.l SkyBufferL(PC),a1
+	a1 = *SkyBufferL;			//	move.l SkyBufferL(PC),a1
 							//	movem.l CloudCoordsLP(PC),a3-a4
 	a4+=8;					//	addq.w #8,a4
 							//	moveq #cloudcount-1,d7
@@ -582,7 +611,7 @@ void VBint()			//					;Blank template VERTB interrupt
 		st_w(2+a1,d1 & 0xFFFF);	//	move.w d1,6(a1)		;lo word
 
 		a1+=8;				//	addq #8,a1		;point to next bpl to poke in copper
-		a0 = skybpl+a0;		//	lea skybpl(a0),a0
+		a0 = SkyBpl+a0;		//	lea skybpl(a0),a0
 							//	dbf d0,.bpll2
 	}
 
@@ -668,7 +697,7 @@ void PlotChar()										//PlotChar:	;a0=scrollptr
 	d1 *= col;										//	mulu #col,d1
 
 	d0 += d1;									//	add.l d1,d0			;offset into font bitmap
-	d0 += Font;									//	add.l #Font,d0
+	d0 += (uint32) Font;							//	add.l #Font,d0
 
 	WAITBLIT();									//	WAITBLIT
 												//	move.l #0x09f00000,BLTCON0(a6)
@@ -713,23 +742,23 @@ void PlotBob()										//PlotBob:		;d0-d3/a0-a2=x,y,width,h,src,dest,mask,BLTCO
 	d5 = d0;										//	move.w d0,d5			;and put in
 	d5 = (D5.hw >> 16) | (D5.lw << 16);				//	swap d5				;both words
 
-	d5 = d5 | d0;									//	move.w d0,d5			;of BLTCON
+	D5.lw = D0.lw;									//	move.w d0,d5			;of BLTCON
 	
-												//	or.l d4,d5
+	d5 = d5 | d4;									//	or.l d4,d5
 	
-												//	mulu #3*64,d3			;calculate blit size
-												//	add.w d2,d3
+	d3 *= 64*3;									//	mulu #3*64,d3			;calculate blit size
+	D3.lw += D2.lw;								//	add.w d2,d3
 
-												//	add.w d2,d2			;w/8
-												//	neg.w d2
-												//	add.w #SkyBpl,d2		;=SkyBpl-w/8
+	D2.lw += D2.lw;								//	add.w d2,d2			;w/8
+	D2.lw = -D2.lw;									//	neg.w d2
+	D2.lw += SkyBpl;								//	add.w #SkyBpl,d2		;=SkyBpl-w/8
 
-												//	WAITBLIT
+	WAITBLIT();									//	WAITBLIT
 
 												//	move.l d5,BLTCON0(a6)
 												//	move.l #0xffffffff,BLTAFWM(a6)
 												//	move.l a2,BLTAPTH(a6)
-												//	move.l a0,BLTBPTH(a6)
+	// add libblitter.library here							//	move.l a0,BLTBPTH(a6)
 												//	move.l a1,BLTCPTH(a6)
 												//	move.l a1,BLTDPTH(a6)
 												//	clr.l BLTBMOD(a6)
@@ -772,7 +801,7 @@ void Init()											//Init:
 {												//	movem.l d0-a6,-(sp)
 
 	d1=0;										//	moveq #0,d1
-	a1 = Screen;									//	lea Screen,a1
+	a1 = (uint32) Screen;							//	lea Screen,a1
 	d0 = bplsize*fontbpls/2-1;						//	move.w #bplsize*fontbpls/2-1,d0
 	for (;d0;d0--)									//.l:	move.w #0,(a1)+
 	{
@@ -780,14 +809,15 @@ void Init()											//Init:
 		D1.lw += 1;								//	addq.w #1,d1
 	}											//	dbf d0,.l
 
-	a1 = Sky;										//	lea Sky,a1
-	a2 = Sky2;									//	lea Sky2,a2		;clear 2nd buffer also
-	a3 = SkyBufferL;								//	lea SkyBufferL(PC),a3
-	st_l(a3,a1); a3+=4;								//	move.l a1,(a3)+
-	st_l(a3,a2); a3+=4;								//	move.l a2,(a3)+		;Double-buffer list initialized
+												//	lea Sky,a1
+												//	lea Sky2,a2		;clear 2nd buffer also
+												//	lea SkyBufferL(PC),a3
+	SkyBufferL[0] = (uint32) Sky;						//	move.l a1,(a3)+
+	SkyBufferL[1] = (uint32) Sky2;						//	move.l a2,(a3)+		;Double-buffer list initialized
 
-	a1 = Sky;										//	lea Sky,a1
-	s2 = Sky2;									//	lea Sky2,a2		;clear 2nd buffer also
+
+	a1 = (uint32) Sky;								//	lea Sky,a1
+	a2 = (uint32) Sky2;								//	lea Sky2,a2		;clear 2nd buffer also
 
 	d0=0;										//	moveq #0,d0		;clear buffers
 	d7= (SkyE-Sky)/8-1;								//	move.w #(SkyE-Sky)/8-1,d7
@@ -802,8 +832,8 @@ void Init()											//Init:
 
 //    *--- playfield 1 ptrs ---*
 
-	a0 = Logo;									//	lea Logo,a0		;ptr to first bitplane of logo
-	a1 = CopBplP;									//	lea CopBplP,a1		;where to poke the bitplane pointer words.
+	a0 = (uint32) Logo;								//	lea Logo,a0		;ptr to first bitplane of logo
+	a1 = (uint32) CopBplP;							//	lea CopBplP,a1		;where to poke the bitplane pointer words.
 	for(d0=3-1;d0;d0--)								//	move #3-1,d0
 	{											//.bpll:
 		d1 = a0;									//	move.l a0,d1
@@ -818,121 +848,120 @@ void Init()											//Init:
 
 //    *--- playfield 2 ptrs ---*
 
-	lea Sky+14,a0		;ptr to first bitplane of logo
-	lea CopSkyBplP,a1	;where to poke the bitplane pointer words.
-	move #3-1,d0
-.bpll2:
-	move.l a0,d1
-	swap d1
-	move.w d1,2(a1)		;hi word
-	swap d1
-	move.w d1,6(a1)		;lo word
+	a0 = (uint32) Sky +14;							//	lea Sky+14,a0		;ptr to first bitplane of logo
+	a1 = (uint32) CopSkyBplP;						//	lea CopSkyBplP,a1	;where to poke the bitplane pointer words.
+	for (d0=3-1;d0;d0--)								//	move #3-1,d0
+	{											//.bpll2:
+		d1 = a0;									//	move.l a0,d1
+		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
+		st_w(2+a1,d1);								//	move.w d1,2(a1)		;hi word
+		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
+		st_w(6+a1,d1);								//	move.w d1,6(a1)		;lo word
 
-	addq #8,a1		;point to next bpl to poke in copper
-	lea skybpl(a0),a0
-	dbf d0,.bpll2
+		a1+=8;									//	addq #8,a1		;point to next bpl to poke in copper
+		a0 = SkyBpl + a0;							//	lea skybpl(a0),a0
+	}											//	dbf d0,.bpll2
 
+	a1 = (uint32) SprP;								//	lea SprP,a1
+	a0 = (uint32) StarSpr;							//	lea StarSpr,a0
+	d1 = a0;										//	move.l a0,d1
+	for (d0 = 2-1;d0;d0--);							//	moveq #2-1,d0
+	{											//.sprpl:	
+		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
+		st_w(a1+2,d1);								//	move.w d1,2(a1)
+		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
+		st_w(a1+6,d1);								//	move.w d1,6(a1)
+		a1 += 8;									//	addq.w #8,a1
+		d1+= (StarSpr2-StarSpr);						//	add.l #(StarSpr2-StarSpr),d1 
+	}											//	dbf d0,.sprpl	
 
-	lea SprP,a1
-	lea StarSpr,a0
-	move.l a0,d1
-	moveq #2-1,d0
-.sprpl:	
-	swap d1
-	move.w d1,2(a1)
-	swap d1
-	move.w d1,6(a1)
-	addq.w #8,a1
-	add.l #(StarSpr2-StarSpr),d1 
-	dbf d0,.sprpl	
+	a0 = (uint32) NullSpr;							//	lea NullSpr,a0
+	d1 = a0;										//	move.l a0,d1
+	for (d0 = 6 - 1;d0;d0--)							//	moveq #6-1,d0
+	{											//.sprpl2:
+		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
+		st_w(a1+2,d1);								//	move.w d1,2(a1)
+		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
+		st_w(a1+6,d1);								//	move.w d1,6(a1)
+		a1 += 8;									//	addq.w #8,a1
+	}											//	DBF d0,.sprpl2
 
-	lea NullSpr,a0
-	move.l a0,d1
-	moveq #6-1,d0
-.sprpl2:
-	swap d1
-	move.w d1,2(a1)
-	swap d1
-	move.w d1,6(a1)
-	addq.w #8,a1
-	DBF d0,.sprpl2
-
-	lea FontE-7*2,a0
-	lea FontPalP+2,a1
-	moveq #7-1,d0
-.coll:	move.w (a0)+,(a1)+
-	addq.w #2,a1
-	DBF d0,.coll
+	a0 =	(uint32) FontE-7*2;							//	lea FontE-7*2,a0
+	a1 =	(uint32) FontPalP+2;						//	lea FontPalP+2,a1
+	for(d0=7-1;d0;d0--)								//	moveq #7-1,d0
+	{											//.coll:	move.w (a0)+,(a1)+
+		a1+=2;									//	addq.w #2,a1
+	}											//	DBF d0,.coll
 
 //    *--- initialize sprites ---*
 
-	lea StarSpr,a1
-	moveq #0x2c,d0
-	moveq #26-1,d7
-.skyl:	
-	move.b d0,(a1)+			;vstart
-	addq.b #1,(a1)+			;add speed to hpos
-	addq.b #1,d0			;increase vstop value
-	move.b d0,(a1)+			;vstop
-	addq.b #1,d0			;increase vstop value
-	addq.w #5,a1			;skip to next sprite control words
+	a1 = (uint32) StarSpr;							//	lea StarSpr,a1
+	d0 = 0x2c;									//	moveq #0x2c,d0
+	for (d7 = 26-1;d7;d7--)							//	moveq #26-1,d7
+	{											//.skyl:	
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+			;vstart
+		st_b(a1,ld_b(a1)+1); a1++;					//	addq.b #1,(a1)+			;add speed to hpos
+		d0++;									//	addq.b #1,d0			;increase vstop value
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+			;vstop
+		d0++;									//	addq.b #1,d0			;increase vstop value
+		a1 += 5;									//	addq.w #5,a1			;skip to next sprite control words
 
-	move.b d0,(a1)+
-	addq.b #2,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	addq.w #5,a1
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		st_b(a1,ld_b(a1)+2); a1++;					//	addq.b #2,(a1)+
+		d0++;									//	addq.b #1,d0
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		d0++;									//	addq.b #1,d0			;increase vstop value
+		a5+=5;									//	addq.w #5,a1
 
-	move.b d0,(a1)+
-	addq.b #1,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	addq.w #5,a1
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		st_b(a1,ld_b(a1)+1); a1++;					//	addq.b #1,(a1)+
+		d0++;									//	addq.b #1,d0
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		d0++;									//	addq.b #1,d0			;increase vstop value
+		a5+=5;									//	addq.w #5,a1
 
-	move.b d0,(a1)+
-	addq.b #3,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	addq.w #5,a1
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		st_b(a1,ld_b(a1)+3); a1++;					//	addq.b #3,(a1)+
+		d0++;									//	addq.b #1,d0
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		d0++;									//	addq.b #1,d0			;increase vstop value
+		a5+=5;									//	addq.w #5,a1
 
-	dbf d7,.skyl
+	}											//	dbf d7,.skyl
 
-	move.b d0,(a1)+			;vstart
-	addq.b #1,(a1)+			;add speed to hpos
-	addq.b #1,d0			;increase vstop value
-	move.b d0,(a1)+			;vstop
-	addq.b #1,d0			;increase vstop value
-	addq.w #5,a1			;skip to next sprite control words
+	st_b(a1,d0); a1++;								//	move.b d0,(a1)+			;vstart
+												//	addq.b #1,(a1)+			;add speed to hpos
+												//	addq.b #1,d0			;increase vstop value
+												//	move.b d0,(a1)+			;vstop
+												//	addq.b #1,d0			;increase vstop value
+												//	addq.w #5,a1			;skip to next sprite control words
 
-	move.b d0,(a1)+
-	addq.b #2,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	addq.w #5,a1
+												//	move.b d0,(a1)+
+												//	addq.b #2,(a1)+
+												//	addq.b #1,d0
+												//	move.b d0,(a1)+
+												//	addq.b #1,d0			;increase vstop value
+												//	addq.w #5,a1
 
 //    *--- below line 0xff ---*
 
-	moveq #%00000110,d6
+												//	moveq #%00000110,d6
 
-	move.b d0,(a1)+
-	addq.b #1,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	move.b d6,(a1)+
-	addq.w #4,a1			;skip to next sprite control words
+												//	move.b d0,(a1)+
+												//	addq.b #1,(a1)+
+												//	addq.b #1,d0
+												//	move.b d0,(a1)+
+												//	addq.b #1,d0			;increase vstop value
+												//	move.b d6,(a1)+
+												//	addq.w #4,a1			;skip to next sprite control words
 
-	move.b d0,(a1)+
-	addq.b #3,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	move.b d6,(a1)+
-	addq.w #4,a1			;skip to next sprite control words
+												//	move.b d0,(a1)+
+												//	addq.b #3,(a1)+
+												//	addq.b #1,d0
+												//	move.b d0,(a1)+
+												//	addq.b #1,d0			;increase vstop value
+												//	move.b d6,(a1)+
+												//	addq.w #4,a1			;skip to next sprite control words
 
 	moveq #5-1,d7
 .floorl:	
@@ -1552,10 +1581,7 @@ StarSpr2:
 	ENDR
 	dc.w 0,0
 
-NullSpr:
-	dc.w 0x2a20,0x2b00
-	dc.w 0,0
-	dc.w 0,0
+
 
 #define cop_w( a,b ) *cop_ptr++=a; *cop_ptr++=b; 
 
@@ -1763,9 +1789,6 @@ waitras6 = cop_ptr;
 	cop_w (0x96bf,0xfffe);
 }
 
-FontPalP:
-	dc.w 0x0182,0x0ddd,0x0184,0x0833,0x0186,0x0334
-	dc.w 0x0188,0x0a88,0x018a,0x099a,0x018c,0x0556,0x018e,0x0633
 
 ScrBplP:
 	dc.w 0xe0,0
