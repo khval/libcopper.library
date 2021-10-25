@@ -72,8 +72,13 @@ uint8 ScrollTextWrap = 0;											//	ScrollTextWrap:
 															//		dc.b 0
 uint16 ScrollCtr=0;												//	ScrollCtr:
 															//		dc.w 0
-uint16 BounceYspeed=0;										// 	BounceYspeed:
+int16 BounceYspeed=0;											// 	BounceYspeed:
 															//		dc.w 0
+int16 BounceY=1*8;											//	BounceY:
+															//		dc.w 1*8
+int16	 BounceYaccel=-1;											//	BounceYaccel:
+															//		dc.w -1
+
 uint16 SineCtr=0;												//	SineCtr:
 															//		dc.w 0
 uint32 SkyBufferL[]={0,0};										//	SkyBufferL:
@@ -151,6 +156,7 @@ uint16 *waitras3;
 uint16 *waitras4;
 uint16 *waitras5;
 uint16 *waitras6;
+uint16 *ScrBplP;
 
 uint8 *Module1;
 
@@ -192,6 +198,7 @@ void Main();
 void PlotChar();
 void PlotBob();
 void Scrollit();
+void 	BounceScroller();
 
 //********************  MACROS  ********************
 
@@ -930,271 +937,268 @@ void Init()											//Init:
 	}											//	dbf d7,.skyl
 
 	st_b(a1,d0); a1++;								//	move.b d0,(a1)+			;vstart
-												//	addq.b #1,(a1)+			;add speed to hpos
-												//	addq.b #1,d0			;increase vstop value
-												//	move.b d0,(a1)+			;vstop
-												//	addq.b #1,d0			;increase vstop value
-												//	addq.w #5,a1			;skip to next sprite control words
+	st_b(a1,ld_b(a1)+1); a1++;						//	addq.b #1,(a1)+			;add speed to hpos
+	D0.b0+=1;									//	addq.b #1,d0			;increase vstop value
+	st_b(a1,d0); a1++;								//	move.b d0,(a1)+			;vstop
+	D0.b0+=1;									//	addq.b #1,d0			;increase vstop value
+	st_w(a1,ld_w(a1)+5);							//	addq.w #5,a1			;skip to next sprite control words
 
-												//	move.b d0,(a1)+
-												//	addq.b #2,(a1)+
-												//	addq.b #1,d0
-												//	move.b d0,(a1)+
-												//	addq.b #1,d0			;increase vstop value
-												//	addq.w #5,a1
+	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
+	st_b(a1,ld_b(a1)+1); a1+;							//	addq.b #2,(a1)+
+	D0.b0+=1;									//	addq.b #1,d0
+	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
+	D0.b0+=1;									//	addq.b #1,d0			;increase vstop value
+	st_w(a1,ld_w(a1)+5);							//	addq.w #5,a1
 
 //    *--- below line 0xff ---*
 
-												//	moveq #%00000110,d6
+	d6 = B00000110;								//	moveq #%00000110,d6
 
-												//	move.b d0,(a1)+
-												//	addq.b #1,(a1)+
-												//	addq.b #1,d0
-												//	move.b d0,(a1)+
-												//	addq.b #1,d0			;increase vstop value
-												//	move.b d6,(a1)+
-												//	addq.w #4,a1			;skip to next sprite control words
+	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
+	st_b(a1,ld_b(a1)+1); a1++;						//	addq.b #1,(a1)+
+	D0.b0+=1;									//	addq.b #1,d0
+	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
+	D0.b0+=1;									//	addq.b #1,d0			;increase vstop value
+	st_b(a1,d6); a1++;								//	move.b d6,(a1)+
+	a1+=4;										//	addq.w #4,a1			;skip to next sprite control words
 
-												//	move.b d0,(a1)+
-												//	addq.b #3,(a1)+
-												//	addq.b #1,d0
-												//	move.b d0,(a1)+
-												//	addq.b #1,d0			;increase vstop value
-												//	move.b d6,(a1)+
-												//	addq.w #4,a1			;skip to next sprite control words
+	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
+	st_b(a1,ld_b(a1)+3); a1++;						//	addq.b #3,(a1)+
+	D0.b0+=1;									//	addq.b #1,d0
+	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
+	D0.b0+=1;									//	addq.b #1,d0			;increase vstop value
+	st_b(a1,d6); a1++;								//	move.b d6,(a1)+
+	a1+=4;										//	addq.w #4,a1			;skip to next sprite control words
 
-	moveq #5-1,d7
-.floorl:	
-	move.b d0,(a1)+			;vstart
-	addq.b #1,(a1)+			;add speed to hpos
-	addq.b #1,d0			;increase vstop value
-	move.b d0,(a1)+			;vstop
-	addq.b #1,d0			;increase vstop value
-	move.b d6,(a1)+
-	addq.w #4,a1			;skip to next sprite control words
+	for(d7=5-1;d7;d7--)								//	moveq #5-1,d7
+	{											//.floorl:	
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+			;vstart
+		st_b(a1,ld_b(a1)+1); a1++;					//	addq.b #1,(a1)+			;add speed to hpos
+		D0.b0+=1;								//	addq.b #1,d0			;increase vstop value
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+			;vstop
+		D0.b0+=1;								//	addq.b #1,d0			;increase vstop value
+		st_b(a1,d6); a1++;							//	move.b d6,(a1)+
+		a1+=4;									//	addq.w #4,a1			;skip to next sprite control words
 
-	move.b d0,(a1)+
-	addq.b #2,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	move.b d6,(a1)+
-	addq.w #4,a1			;skip to next sprite control words
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		st_b(a1,ld_b(a1)+2); a1++;					//	addq.b #2,(a1)+
+		D0.b0+=1;								//	addq.b #1,d0
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		D0.b0+=1;								//	addq.b #1,d0			;increase vstop value
+		st_b(a1,d6); a1++;							//	move.b d6,(a1)+
+		a1+=4;									//	addq.w #4,a1			;skip to next sprite control words
 
-	move.b d0,(a1)+
-	addq.b #1,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	move.b d6,(a1)+
-	addq.w #4,a1			;skip to next sprite control words
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		st_b(a1,ld_b(a1)+1); a1++;					//	addq.b #1,(a1)+
+		D0.b0+=1;								//	addq.b #1,d0
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		D0.b0+=1;								//	addq.b #1,d0			;increase vstop value
+		st_b(a1,d6); a1++;							//	move.b d6,(a1)+
+		a1+=4;									//	addq.w #4,a1			;skip to next sprite control words
 
-	move.b d0,(a1)+
-	addq.b #3,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	move.b d6,(a1)+
-	addq.w #4,a1			;skip to next sprite control words
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		st_b(a1,ld_b(a1)+3); a1++;					//	addq.b #3,(a1)+
+		D0.b0+=1;								//	addq.b #1,d0
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		D0.b0+=1;								//	addq.b #1,d0			;increase vstop value
+		st_b(a1,d6); a1++;							//	move.b d6,(a1)+
+		a1+=4;									//	addq.w #4,a1			;skip to next sprite control words
 
-	dbf d7,.floorl
+	}											//	dbf d7,.floorl
 
 //    *--- odd lines sprites ---*
 
-	lea StarSpr2,a1
-	moveq #0x2d,d0
-	moveq #26-1,d7
-.skyl2:
-	move.b d0,(a1)+			;vstart
-	addq.b #1,(a1)+			;add speed to hpos
-	addq.b #1,d0			;increase vstop value
-	move.b d0,(a1)+			;vstop
-	addq.b #1,d0			;increase vstop value
-	addq.w #5,a1			;skip to next sprite control words
+	a1 = (uint32) StarSpr2;							//	lea StarSpr2,a1
+	d0 = 0x2d;									//	moveq #0x2d,d0
+	for(d7=26-1;d7;d7--)							//	moveq #26-1,d7
+	{											//.skyl2:
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+			;vstart
+		st_b(a1,ld_b(a1)+1); a1++;					//	addq.b #1,(a1)+			;add speed to hpos
+		D0.b0+=1;								//	addq.b #1,d0			;increase vstop value
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+			;vstop
+		D0.b0+=1;								//	addq.b #1,d0			;increase vstop value
+		a1+=5;									//	addq.w #5,a1			;skip to next sprite control words
 
-	move.b d0,(a1)+
-	addq.b #2,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	addq.w #5,a1
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		st_b(a1,ld_b(a1)+2); a1++;					//	addq.b #2,(a1)+
+		D0.b0+=1;								//	addq.b #1,d0
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		D0.b0+=1;								//	addq.b #1,d0			;increase vstop value
+		a1+=5;									//	addq.w #5,a1
 
-	move.b d0,(a1)+
-	addq.b #1,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	addq.w #5,a1
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		st_b(a1,ld_b(a1)+1); a1++;					//	addq.b #1,(a1)+
+		D0.b0+=1;								//	addq.b #1,d0
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		D0.b0+=1;								//	addq.b #1,d0			;increase vstop value
+		a1+=5;									//	addq.w #5,a1
 
-	move.b d0,(a1)+
-	addq.b #3,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	addq.w #5,a1
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		st_b(a1,ld_b(a1)+3); a1++;					//	addq.b #3,(a1)+
+		D0.b0+=1;								//	addq.b #1,d0
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		D0.b0+=1;								//	addq.b #1,d0			;increase vstop value
+		a1+=5;									//	addq.w #5,a1
 
-	dbf d7,.skyl2
+	}											//	dbf d7,.skyl2
 
-	move.b d0,(a1)+			;vstart
-	addq.b #1,(a1)+			;add speed to hpos
-	addq.b #1,d0			;increase vstop value
-	move.b d0,(a1)+			;vstop
-	addq.b #1,d0			;increase vstop value
-	addq.w #5,a1			;skip to next sprite control words
+	st_b(a1,d0); a1++;								//	move.b d0,(a1)+			;vstart
+	st_b(a1,ld_b(a1)+1); a1++;						//	addq.b #1,(a1)+			;add speed to hpos
+	D0.b0++;										//	addq.b #1,d0			;increase vstop value
+												//	move.b d0,(a1)+			;vstop
+	D0.b0++;										//	addq.b #1,d0			;increase vstop value
+	a1+=5;										//	addq.w #5,a1			;skip to next sprite control words
 
-	move.b d0,(a1)+
-	addq.b #2,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	move.b #2,(a1)+
-	addq.w #4,a1			;skip to next sprite control words
+	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
+	st_b(a1,ld_b(a1)+2); a1++;						//	addq.b #2,(a1)+
+	D0.b0++;										//	addq.b #1,d0
+												//	move.b d0,(a1)+
+	D0.b0++;										//	addq.b #1,d0			;increase vstop value
+												//	move.b #2,(a1)+
+	a1+=4;										//	addq.w #4,a1			;skip to next sprite control words
 
 //    *--- below line 0xff ---*
 
-	moveq #%00000110,d6
+	d6 =	D00000110;								//	moveq #%00000110,d6
 
-	move.b d0,(a1)+
-	addq.b #1,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	move.b d6,(a1)+
-	addq.w #4,a1			;skip to next sprite control words
+	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
+	st_b(a1,ld_b(a1)+1); a1++;						//	addq.b #1,(a1)+
+	D0.b0++;										//	addq.b #1,d0
+	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
+	D0.b0++;										//	addq.b #1,d0			;increase vstop value
+	st_b(a1,d6); a1++;								//	move.b d6,(a1)+
+	a1+=4;										//	addq.w #4,a1			;skip to next sprite control words
 
-	move.b d0,(a1)+
-	addq.b #3,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	move.b d6,(a1)+
-	addq.w #4,a1			;skip to next sprite control words
+	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
+	st_b(a1,ld_b(a1)+3); a1++;						//	addq.b #3,(a1)+
+	D0.b0++;										//	addq.b #1,d0
+	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
+	D0.b0++;										//	addq.b #1,d0			;increase vstop value
+	st_b(a1,d6); a1++;								//	move.b d6,(a1)+
+	a1+=4;										//	addq.w #4,a1			;skip to next sprite control words
 
-	moveq #5-1,d7
-.floorl2:
-	move.b d0,(a1)+			;vstart
-	addq.b #1,(a1)+			;add speed to hpos
-	addq.b #1,d0			;increase vstop value
-	move.b d0,(a1)+			;vstop
-	addq.b #1,d0			;increase vstop value
-	move.b d6,(a1)+
-	addq.w #4,a1			;skip to next sprite control words
+	for(d7=5-1;d7;d7--)								//	moveq #5-1,d7
+	{											//.floorl2:
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+			;vstart
+		st_b(a1,ld_b(a1)+1); a1++;					//	addq.b #1,(a1)+			;add speed to hpos
+		D0.b0++;									//	addq.b #1,d0			;increase vstop value
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+			;vstop
+		D0.b0++;									//	addq.b #1,d0			;increase vstop value
+		st_b(a1,d6); a1++;							//	move.b d6,(a1)+
+		a1+=4;									//	addq.w #4,a1			;skip to next sprite control words
 
-	move.b d0,(a1)+
-	addq.b #2,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	move.b d6,(a1)+
-	addq.w #4,a1			;skip to next sprite control words
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		st_b(a1,ld_b(a1)+2); a1++;					//	addq.b #2,(a1)+
+		D0.b0++;									//	addq.b #1,d0
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		D0.b0++;									//	addq.b #1,d0			;increase vstop value
+		st_b(a1,d6); a1++;							//	move.b d6,(a1)+
+		a1+=4;									//	addq.w #4,a1			;skip to next sprite control words
 
-	move.b d0,(a1)+
-	addq.b #1,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	move.b d6,(a1)+
-	addq.w #4,a1			;skip to next sprite control words
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		st_b(a1,ld_b(a1)+1); a1++;					//	addq.b #1,(a1)+
+		D0.b0++;									//	addq.b #1,d0
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		D0.b0++;									//	addq.b #1,d0			;increase vstop value
+		st_b(a1,d6); a1++;							//	move.b d6,(a1)+
+		a1+=4;									//	addq.w #4,a1			;skip to next sprite control words
 
-	move.b d0,(a1)+
-	addq.b #3,(a1)+
-	addq.b #1,d0
-	move.b d0,(a1)+
-	addq.b #1,d0			;increase vstop value
-	move.b d6,(a1)+
-	addq.w #4,a1			;skip to next sprite control words
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		st_b(a1,ld_b(a1)+3); a1++;					//	addq.b #3,(a1)+
+		D0.b0++;									//	addq.b #1,d0
+		st_b(a1,d0); a1++;							//	move.b d0,(a1)+
+		D0.b0++;									//	addq.b #1,d0			;increase vstop value
+		st_b(a1,d6); a1++;							//	move.b d6,(a1)+
+		a1+=4;									//	addq.w #4,a1			;skip to next sprite control words
 
-	dbf d7,.floorl2
+	}											//	dbf d7,.floorl2
 
-	movem.l (sp)+,d0-a6
-	rts
+												//	movem.l (sp)+,d0-a6
+}												//	rts
 
-CopyB:	;d0,a0,a1=count,source,destination
-.l:	move.b (a0)+,(a1)+
-	subq.l #1,d0
-	bne.s .l
-	rts
+void CopyB()										//CopyB:	;d0,a0,a1=count,source,destination
+{										
+	do {
+		st_b(a1,ld_b(a0)); a0++; a1++;				//.l:	move.b (a0)+,(a1)+
+		d0--;										//	subq.l #1,d0
+	} while(d0);									//	bne.s .l
+}												//	rts
 
+/*
 BlitWait:
 	tst DMACONR(a6)			;for compatibility
 .waitblit:
 	btst #6,DMACONR(a6)
 	bne.s .waitblit
 	rts
+*/
 
-BounceScroller:
-	MOVEM.L D0-D1/A0-A1,-(SP)
+void 	BounceScroller()								//BounceScroller:
+{												//	MOVEM.L D0-D1/A0-A1,-(SP)
 
-	lea Screen,a0		;ptr to first bitplane of font
-	move.w BounceY(PC),d0
-	move.w BounceYaccel(PC),d1
-	add.w d1,BounceYspeed
-	add.w BounceYspeed(PC),d0
-	bpl.s .nobounce
-	move.w #32,BounceYspeed
-	clr.w d0
-.nobounce:
+	a0 = (uint32) Screen;							//	lea Screen,a0		;ptr to first bitplane of font
+	d0 = BounceY;									//	move.w BounceY(PC),d0
+	d1 = BounceYaccel;								//	move.w BounceYaccel(PC),d1
+	BounceYspeed+=d1;							//	add.w d1,BounceYspeed
+	d0 += BounceYspeed;							//	add.w BounceYspeed(PC),d0
+												//	bpl.s .nobounce
+	BounceYspeed = 32;							//	move.w #32,BounceYspeed
+	d0 = 0;										//	clr.w d0
+												//.nobounce:
 
-	tst.b Cmd_Bounce
-	bne.s .bounce2
-	moveq #1*8,d0
-.bounce2:
-	move.w d0,BounceY
+	if (Cmd_Bounce)								//	tst.b Cmd_Bounce
+	{											//	bne.s .bounce2
+		d0 = 1*8;									//	moveq #1*8,d0
+	}											//.bounce2:
+	d0 = BounceY;									//	move.w d0,BounceY
 
-	lsr.w #3,d0
+	d0 >>= 3;									//	lsr.w #3,d0
 
-	mulu #3*scrbpl,d0
-	add.l d0,a0
+	d0 *= 3*ScrBpl;								//	mulu #3*scrbpl,d0
+	a0 += d0;									//	add.l d0,a0
 
-	lea ScrBplP,a1		;where to poke the bitplane pointer words.
-	moveq #fontbpls-1,d0
-.bpll2:	move.l a0,d1
-	swap d1
-	move.w d1,2(a1)		;hi word
-	swap d1
-	move.w d1,6(a1)		;lo word
+	a1 = (uint32) ScrBplP;							//	lea ScrBplP,a1		;where to poke the bitplane pointer words.
+	for (d0 = fontbpls-1;d0;d0--)						//	moveq #fontbpls-1,d0
+	{											//.bpll2:	move.l a0,d1
+		d1 = a0;
+												//	swap d1
+		st_w(a1+2,D1.hw );							//	move.w d1,2(a1)		;hi word
+												//	swap d1
+		st_w(a1+6,D1.lw );							//	move.w d1,6(a1)		;lo word
 
-	addq #8,a1		;point to next bpl to poke in copper
-	lea ScrBpl(a0),a0
-	dbf d0,.bpll2
+		a1+=8;									//	addq #8,a1		;point to next bpl to poke in copper
+		a0 = ScrBpl + a0;							//	lea ScrBpl(a0),a0
+	}											//	dbf d0,.bpll2
 
-	MOVEM.L (SP)+,D0-D1/A0-A1
-	RTS
+												//	MOVEM.L (SP)+,D0-D1/A0-A1
+}												//	RTS
 
-	even
-
-//********** PLAYROUTINE CODE **********
-//;Note: if this is put in its own section (or compiled as separate binary), then
-//;jsr <addr>+P61_InitOffset,P61_MusicOffset,P61_EndOffset,P61_SetPositionOffset
-//;to call the routines.
-
-Playrtn:
-	include "P6112/P6112-Play.i"
+												//	even
 
 //********** DATA **********
 uint16	BarBehind[] =
-	{ 0x558	;color00 value
-	logocolors
-	, 0x558	;color00 value
-	, 0x558	;color00 value
-	, 0x558	;color00 value
-	, 0x558	;color00 value
-	, 0x558	;color00 value
-	, 0x558	;color00 value
-	, 0x558	;color00 value
+	{ 0x558	//;color00 value
+	, logocolors
+	, 0x558	//;color00 value
+	, 0x558	//;color00 value
+	, 0x558	//;color00 value
+	, 0x558	//;color00 value
+	, 0x558	//;color00 value
+	, 0x558	//;color00 value
+	, 0x558	//;color00 value
 
-	, 0x99d	;color00...
-	logocolors
-	, 0x99d	;color00...
-	, 0x99d	;color00...
-	, 0x99d	;color00...
-	, 0x99d	;color00...
-	, 0x99d	;color00...
-	, 0x99d	;color00...
-	, 0x99d	;color00...
+	, 0x99d	//;color00...
+	, logocolors
+	, 0x99d	//;color00...
+	, 0x99d	//;color00...
+	, 0x99d	//;color00...
+	, 0x99d	//;color00...
+	, 0x99d	//;color00...
+	, 0x99d	//;color00...
+	, 0x99d	//;color00...
 
 	, 0xfff
-	logocolors
+	, logocolors
 	, 0xfff
 	, 0xfff
 	, 0xfff
@@ -1204,7 +1208,7 @@ uint16	BarBehind[] =
 	, 0xfff
 
 	, 0x99d
-	logocolors
+	, logocolors
 	, 0x99d
 	, 0x99d
 	, 0x99d
@@ -1214,7 +1218,7 @@ uint16	BarBehind[] =
 	, 0x99d
 
 	, 0x558
-	logocolors
+	, logocolors
 	, 0x558
 	, 0x558
 	, 0x558
@@ -1223,9 +1227,9 @@ uint16	BarBehind[] =
 	, 0x558
 	, 0x558
 
-	, logobgcol			;restore
-	logocolors
-	cloudcolors
+	, logobgcol			//;restore
+	, logocolors
+	, cloudcolors
 };
 
 uint16	BarInFront[] =
@@ -1309,8 +1313,8 @@ uint16	BarInFront[] =
 	, 0x558
 	, 0x558
 	, logobgcol
-	logocolors
-	cloudcolors
+	, logocolors
+	, cloudcolors
  };
 
 char FontTbl[]={
@@ -1326,10 +1330,6 @@ char FontTbl[]={
 	, 22,23,24,25
 	};
 
-BounceY:
-	dc.w 1*8
-BounceYaccel:
-	dc.w -1
 
 void *CloudCoordsLP[]=			//CloudCoordsLP:
 	{
@@ -1337,25 +1337,27 @@ void *CloudCoordsLP[]=			//CloudCoordsLP:
 		CloudCoordsL2			//	dc.l CloudCoordsL2
 	};
 
-
-struct cloud CloudCoordsL =							//CloudCoordsL:
+/*
+struct cloud CloudCoordsL[] =							//CloudCoordsL:
 	{
-		Cloud3,				//	dc.l Cloud3
-		Cloud3Mask,			//	dc.l Cloud3Mask
-		90,					//	dc.w 90			;x
-		170,					//	dc.w 170		;y
-		48,					//	dc.w 48			;width
-		15,					//	dc.w 15			;height
-		1,					//	dc.w 1			;x speed
-	};
-
-	dc.l Cloud3
-	dc.l Cloud3Mask
-	dc.w 284		;x
-	dc.w 199		;y
-	dc.w 48			;width
-	dc.w 15			;height
-	dc.w 1			;x speed
+		{
+			Cloud3,				//	dc.l Cloud3
+			Cloud3Mask,			//	dc.l Cloud3Mask
+			90,					//	dc.w 90			;x
+			170,					//	dc.w 170		;y
+			48,					//	dc.w 48			;width
+			15,					//	dc.w 15			;height
+			1,					//	dc.w 1			;x speed
+		},
+		{
+			Cloud3,				//	dc.l Cloud3
+			Cloud3Mask,			//	dc.l Cloud3Mask
+			284,					//	dc.w 284		;x
+			199,					//	dc.w 199		;y
+			48,					//	dc.w 48			;width
+			15,					//	dc.w 15			;height
+			1					//	dc.w 1			;x speed
+		},
 
 ;	dc.l Cloud3
 ;	dc.l Cloud3Mask
@@ -1365,88 +1367,100 @@ struct cloud CloudCoordsL =							//CloudCoordsL:
 ;	dc.w 15			;height
 ;	dc.w 1			;x speed
 
-	dc.l Cloud3
-	dc.l Cloud3Mask
-	dc.w 218		;x
-	dc.w 95			;y
-	dc.w 48			;width
-	dc.w 15			;height
-	dc.w 2			;x speed
+		{
+			Cloud3,				//	dc.l Cloud3
+			Cloud3Mask,			//	dc.l Cloud3Mask
+			218,					//	dc.w 218		;x
+			95,					//	dc.w 95			;y
+			48,					//	dc.w 48			;width
+			15,					//	dc.w 15			;height
+			2					//	dc.w 2			;x speed
+		},
+		{
+			Cloud2,				//	dc.l Cloud2
+			Cloud2Mask,			//	dc.l Cloud2Mask
+			320,					//	dc.w 320		;x
+			183,					//	dc.w 183		;y
+			64,					//	dc.w 64			;width
+			24,					//	dc.w 24			;height
+			2					//	dc.w 2			;x speed
+		},
+		{
+			Cloud2,				//	dc.l Cloud2
+			Cloud2Mask,			//	dc.l Cloud2Mask
+			123,					//	dc.w 123		;x
+			123,					//	dc.w 123		;y
+			64,					//	dc.w 64			;width
+			24,					//	dc.w 24			;height
+			2					//	dc.w 2			;x speed
+		},
+		{
+			Cloud2,				//	dc.l Cloud2
+			Cloud2Mask,			//	dc.l Cloud2Mask
+			220,					//	dc.w 210		;x
+			150,					//	dc.w 150		;y
+			64,					//	dc.w 64			;width
+			24,					//	dc.w 24			;height
+			2					//	dc.w 2			;x speed
+		},
+		{
+			Cloud2,				//	dc.l Cloud2
+			Cloud2Mask,			//	dc.l Cloud2Mask
+			156,					//	dc.w 156		;x
+			007,					//	dc.w 007		;y
+			64,					//	dc.w 64			;width
+			24,					//	dc.w 24			;height
+			3					//	dc.w 3			;x speed
+		},
+		{
+			Cloud,				//	dc.l Cloud
+			CloudMask,			//	dc.l CloudMask
+			240,					//	dc.w 240		;x
+			105,					//	dc.w 105		;y
+			112,					//	dc.w 112		;width
+			38,					//	dc.w 38			;height
+			3					//	dc.w 3			;x speed
+		},
+		{
+			Cloud,				//	dc.l Cloud
+			CloudMask,			//	dc.l CloudMask
+			290,					//	dc.w 290		;x
+			47,					//	dc.w 47			;y
+			112,					//	dc.w 112		;width
+			38,					//	dc.w 38			;height
+			4					//	dc.w 4			;x speed
+		},
+		{
+			Cloud,				//	dc.l Cloud
+			CloudMask,			//	dc.l CloudMask
+			0,					//	dc.w 0			;x
+			27,					//	dc.w 27			;y
+			112,					//	dc.w 112		;width
+			38,					//	dc.w 38			;height
+			5,					//	dc.w 5			;x speed
+		}
+	};
+*/
 
-	dc.l Cloud2
-	dc.l Cloud2Mask
-	dc.w 320		;x
-	dc.w 183		;y
-	dc.w 64			;width
-	dc.w 24			;height
-	dc.w 2			;x speed
-
-	dc.l Cloud2
-	dc.l Cloud2Mask
-	dc.w 123		;x
-	dc.w 123		;y
-	dc.w 64			;width
-	dc.w 24			;height
-	dc.w 2			;x speed
-
-	dc.l Cloud2
-	dc.l Cloud2Mask
-	dc.w 210		;x
-	dc.w 150		;y
-	dc.w 64			;width
-	dc.w 24			;height
-	dc.w 2			;x speed
-
-	dc.l Cloud2
-	dc.l Cloud2Mask
-	dc.w 156		;x
-	dc.w 007		;y
-	dc.w 64			;width
-	dc.w 24			;height
-	dc.w 3			;x speed
-
-	dc.l Cloud
-	dc.l CloudMask
-	dc.w 240		;x
-	dc.w 105		;y
-	dc.w 112		;width
-	dc.w 38			;height
-	dc.w 3			;x speed
-
-	dc.l Cloud
-	dc.l CloudMask
-	dc.w 290		;x
-	dc.w 47			;y
-	dc.w 112		;width
-	dc.w 38			;height
-	dc.w 4			;x speed
-
-	dc.l Cloud
-	dc.l CloudMask
-	dc.w 0			;x
-	dc.w 27			;y
-	dc.w 112		;width
-	dc.w 38			;height
-	dc.w 5			;x speed
-
-CloudCoordsLE:
+								//CloudCoordsLE:
 
 CloudCoordsL2:
-	dc.l Cloud3
-	dc.l Cloud3Mask
-	dc.w 90			;x
-	dc.w 170		;y
-	dc.w 48			;width
-	dc.w 15			;height
-	dc.w 1			;x speed
 
-	dc.l Cloud3
-	dc.l Cloud3Mask
-	dc.w 284		;x
-	dc.w 199		;y
-	dc.w 48			;width
-	dc.w 15			;height
-	dc.w 1			;x speed
+								//	dc.l Cloud3
+								//	dc.l Cloud3Mask
+								//	dc.w 90			;x
+								//	dc.w 170		;y
+								//	dc.w 48			;width
+								//	dc.w 15			;height
+								//	dc.w 1			;x speed
+
+								//	dc.l Cloud3
+								//	dc.l Cloud3Mask
+								//	dc.w 284		;x
+								//	dc.w 199		;y
+								//	dc.w 48			;width
+								//	dc.w 15			;height
+								//	dc.w 1			;x speed
 
 //;	dc.l Cloud3
 //;	dc.l Cloud3Mask
@@ -1456,75 +1470,75 @@ CloudCoordsL2:
 //;	dc.w 15			;height
 //;	dc.w 1			;x speed
 
-	dc.l Cloud3
-	dc.l Cloud3Mask
-	dc.w 218		;x
-	dc.w 95			;y
-	dc.w 48			;width
-	dc.w 15			;height
-	dc.w 2			;x speed
+								//	dc.l Cloud3
+								//	dc.l Cloud3Mask
+								//	dc.w 218		;x
+								//	dc.w 95			;y
+								//	dc.w 48			;width
+								//	dc.w 15			;height
+								//	dc.w 2			;x speed
 
-	dc.l Cloud2
-	dc.l Cloud2Mask
-	dc.w 320		;x
-	dc.w 183		;y
-	dc.w 64			;width
-	dc.w 24			;height
-	dc.w 2			;x speed
+								//	dc.l Cloud2
+								//	dc.l Cloud2Mask
+								//	dc.w 320		;x
+								//	dc.w 183		;y
+								//	dc.w 64			;width
+								//	dc.w 24			;height
+								//	dc.w 2			;x speed
 
-	dc.l Cloud2
-	dc.l Cloud2Mask
-	dc.w 123		;x
-	dc.w 123		;y
-	dc.w 64			;width
-	dc.w 24			;height
-	dc.w 2			;x speed
+								//	dc.l Cloud2
+								//	dc.l Cloud2Mask
+								//	dc.w 123		;x
+								//	dc.w 123		;y
+								//	dc.w 64			;width
+								//	dc.w 24			;height
+								//	dc.w 2			;x speed
 
-	dc.l Cloud2
-	dc.l Cloud2Mask
-	dc.w 210		;x
-	dc.w 150		;y
-	dc.w 64			;width
-	dc.w 24			;height
-	dc.w 2			;x speed
+								//	dc.l Cloud2
+								//	dc.l Cloud2Mask
+								//	dc.w 210		;x
+								//	dc.w 150		;y
+								//	dc.w 64			;width
+								//	dc.w 24			;height
+								//	dc.w 2			;x speed
 
-	dc.l Cloud2
-	dc.l Cloud2Mask
-	dc.w 156		;x
-	dc.w 007		;y
-	dc.w 64			;width
-	dc.w 24			;height
-	dc.w 3			;x speed
+								//	dc.l Cloud2
+								//	dc.l Cloud2Mask
+								//	dc.w 156		;x
+								//	dc.w 007		;y
+								//	dc.w 64			;width
+								//	dc.w 24			;height
+								//	dc.w 3			;x speed
 
-	dc.l Cloud
-	dc.l CloudMask
-	dc.w 240		;x
-	dc.w 105		;y
-	dc.w 112		;width
-	dc.w 38			;height
-	dc.w 3			;x speed
+								//	dc.l Cloud
+								//	dc.l CloudMask
+								//	dc.w 240		;x
+								//	dc.w 105		;y
+								//	dc.w 112		;width
+								//	dc.w 38			;height
+								//	dc.w 3			;x speed
 
-	dc.l Cloud
-	dc.l CloudMask
-	dc.w 290		;x
-	dc.w 47			;y
-	dc.w 112		;width
-	dc.w 38			;height
-	dc.w 4			;x speed
+								//	dc.l Cloud
+								//	dc.l CloudMask
+								//	dc.w 290		;x
+								//	dc.w 47			;y
+								//	dc.w 112		;width
+								//	dc.w 38			;height
+								//	dc.w 4			;x speed
 
-	dc.l Cloud
-	dc.l CloudMask
-	dc.w 0			;x
-	dc.w 27			;y
-	dc.w 112		;width
-	dc.w 38			;height
-	dc.w 5			;x speed
+								//	dc.l Cloud
+								//	dc.l CloudMask
+								//	dc.w 0			;x
+								//	dc.w 27			;y
+								//	dc.w 112		;width
+								//	dc.w 38			;height
+								//	dc.w 5			;x speed
 
-CloudCoordsL2E:
+								//CloudCoordsL2E:
 
-gfxname:
-	dc.b "graphics.library",0
-	EVEN
+								//gfxname:
+const char *gfxname = "graphics.library";	//	dc.b "graphics.library",0
+								//	EVEN
 
 
 
@@ -1583,7 +1597,7 @@ StarSpr2:
 
 
 
-#define cop_w( a,b ) *cop_ptr++=a; *cop_ptr++=b; 
+#define cop_w( a,b ) *cop_ptr++=(a); *cop_ptr++=(b); 
 
 void init_copper()
 {
@@ -1787,207 +1801,243 @@ waitras6 = cop_ptr;
 	cop_w (0x19e,0);
 
 	cop_w (0x96bf,0xfffe);
-}
 
+ScrBplP= cop_ptr;
 
-ScrBplP:
-	dc.w 0xe0,0
-	dc.w 0xe2,0
-	dc.w 0xe8,0
-	dc.w 0xea,0
-	dc.w 0xf0,0
-	dc.w 0xf2,0
-	dc.w 0x108,ScrBpl*FontBpls-320/8
-	dc.w 0x92,0x38
-	dc.w 0x94,0xd0
+	cop_w (0xe0,0);
+	cop_w (0xe2,0);
+	cop_w (0xe8,0);
+	cop_w (0xea,0);
+	cop_w (0xf0,0);
+	cop_w (0xf2,0);
+	cop_w (0x108,ScrBpl*FontBpls-320/8);
+	cop_w (0x92,0x38);
+	cop_w (0x94,0xd0);
 
-	dc.w 0x9707,0xfffe
-	dc.w 0x180,0x44e
-	dc.w 0x9807,0xfffe
-	dc.w 0x180,0x44f
-	dc.w 0x9907,0xfffe
-	dc.w 0x180,0x44e
+	cop_w (0x9707,0xfffe);
+	cop_w (0x180,0x44e);
+	cop_w (0x9807,0xfffe);
+	cop_w (0x180,0x44f);
+	cop_w (0x9907,0xfffe);
+	cop_w (0x180,0x44e);
 
-	dc.w 0x9d07,0xfffe
-	dc.w 0x180,0x44d
-	dc.w 0x9e07,0xfffe
-	dc.w 0x180,0x44e
-	dc.w 0x9f07,0xfffe
-	dc.w 0x180,0x44d
+	cop_w (0x9d07,0xfffe);
+	cop_w (0x180,0x44d);
+	cop_w (0x9e07,0xfffe);
+	cop_w (0x180,0x44e);
+	cop_w (0x9f07,0xfffe);
+	cop_w (0x180,0x44d);
 
-	dc.w 0xa407,0xfffe
-	dc.w 0x180,0x44c
-	dc.w 0xa507,0xfffe
-	dc.w 0x180,0x44d
-	dc.w 0xa607,0xfffe
-	dc.w 0x180,0x44c
+	cop_w (0xa407,0xfffe);
+	cop_w (0x180,0x44c);
+	cop_w (0xa507,0xfffe);
+	cop_w (0x180,0x44d);
+	cop_w (0xa607,0xfffe);
+	cop_w (0x180,0x44c);
 
-	dc.w 0xab07,0xfffe
-	dc.w 0x180,0x43c
-	dc.w 0xac07,0xfffe
-	dc.w 0x180,0x44c
-	dc.w 0xad07,0xfffe
-	dc.w 0x180,0x43c
+	cop_w (0xab07,0xfffe);
+	cop_w (0x180,0x43c);
+	cop_w (0xac07,0xfffe);
+	cop_w (0x180,0x44c);
+	cop_w (0xad07,0xfffe);
+	cop_w (0x180,0x43c);
 
-	dc.w 0xb207,0xfffe
-	dc.w 0x180,0x33b
-	dc.w 0xb307,0xfffe
-	dc.w 0x180,0x43c
-	dc.w 0xb407,0xfffe
-	dc.w 0x180,0x33b
+	cop_w (0xb207,0xfffe);
+	cop_w (0x180,0x33b);
+	cop_w (0xb307,0xfffe);
+	cop_w (0x180,0x43c);
+	cop_w (0xb407,0xfffe);
+	cop_w (0x180,0x33b);
 
-	dc.w 0xb907,0xfffe
-	dc.w 0x180,0x33a
-	dc.w 0xba07,0xfffe
-	dc.w 0x180,0x33b
-	dc.w 0xbb07,0xfffe
-	dc.w 0x180,0x33a
+	cop_w (0xb907,0xfffe);
+	cop_w (0x180,0x33a);
+	cop_w (0xba07,0xfffe);
+	cop_w (0x180,0x33b);
+	cop_w (0xbb07,0xfffe);
+	cop_w (0x180,0x33a);
 
-	dc.w 0xc007,0xfffe
-	dc.w 0x180,0x339
-	dc.w 0xc107,0xfffe
-	dc.w 0x180,0x33a
-	dc.w 0xc207,0xfffe
-	dc.w 0x180,0x339
+	cop_w (0xc007,0xfffe);
+	cop_w (0x180,0x339);
+	cop_w (0xc107,0xfffe);
+	cop_w (0x180,0x33a);
+	cop_w (0xc207,0xfffe);
+	cop_w (0x180,0x339);
 
 //;tone down clouds 1 notch
 
-	dc.w 0x0192,0x044b,0x0194,0x055b,0x0196,0x066a
-	dc.w 0x0198,0x088a,0x019a,0x099a,0x019c,0x0bbb,0x019e,0x0ccc
+	cop_w (0x0192,0x044b);
+	cop_w 0x0194,0x055b);
+	cop_w 0x0196,0x066a);
+	cop_w (0x0198,0x088a);
+	cop_w 0x019a,0x099a);
+	cop_w 0x019c,0x0bbb);
+	cop_w 0x019e,0x0ccc);
 
-	dc.w 0xc707,0xfffe
-	dc.w 0x180,0x329
-	dc.w 0xc807,0xfffe
-	dc.w 0x180,0x339
-	dc.w 0xc907,0xfffe
-	dc.w 0x180,0x329
+	cop_w (0xc707,0xfffe);
+	cop_w (0x180,0x329);
+	cop_w (0xc807,0xfffe);
+	cop_w (0x180,0x339);
+	cop_w (0xc907,0xfffe);
+	cop_w (0x180,0x329);
 
-	dc.w 0xce07,0xfffe
-	dc.w 0x180,0x228
-	dc.w 0xcf07,0xfffe
-	dc.w 0x180,0x329
-	dc.w 0xd007,0xfffe
-	dc.w 0x180,0x228
+	cop_w (0xce07,0xfffe);
+	cop_w (0x180,0x228);
+	cop_w (0xcf07,0xfffe);
+	cop_w (0x180,0x329);
+	cop_w (0xd007,0xfffe);
+	cop_w (0x180,0x228);
 
-	dc.w 0xd507,0xfffe
-	dc.w 0x180,0x227
-	dc.w 0xd607,0xfffe
-	dc.w 0x180,0x228
-	dc.w 0xd707,0xfffe
-	dc.w 0x180,0x227
+	cop_w (0xd507,0xfffe);
+	cop_w (0x180,0x227);
+	cop_w (0xd607,0xfffe);
+	cop_w (0x180,0x228);
+	cop_w (0xd707,0xfffe);
+	cop_w (0x180,0x227);
 
-	dc.w 0xdc07,0xfffe
-	dc.w 0x180,0x226
-	dc.w 0xdd07,0xfffe
-	dc.w 0x180,0x227
-	dc.w 0xde07,0xfffe
-	dc.w 0x180,0x226
+	cop_w (0xdc07,0xfffe);
+	cop_w (0x180,0x226);
+	cop_w (0xdd07,0xfffe);
+	cop_w (0x180,0x227);
+	cop_w (0xde07,0xfffe);
+	cop_w (0x180,0x226);
 
-	dc.w 0xe307,0xfffe
-	dc.w 0x180,bgcol
-	dc.w 0xe407,0xfffe
-	dc.w 0x180,0x226
-	dc.w 0xe507,0xfffe
-	dc.w 0x180,bgcol
+	cop_w (0xe307,0xfffe);
+	cop_w (0x180,bgcol);
+	cop_w (0xe407,0xfffe);
+	cop_w (0x180,0x226);
+	cop_w (0xe507,0xfffe);
+	cop_w (0x180,bgcol);
 
-	dc.w 0xffdf,0xfffe
+	cop_w (0xffdf,0xfffe);
 
 //    ---  bottom plate start  ---
 
-	dc.w 0x07df,0xfffe
-	dc.w 0x10a,-(skybwid+320/8)
-	dc.w 0x104,0x20
+	cop_w (0x07df,0xfffe);
+	cop_w (0x10a,-(skybwid+320/8));
+	cop_w (0x104,0x20);
 
-	dc.w 0x0192,0x0248,0x0194,0x0348,0x0196,0x0458
-	dc.w 0x0198,0x0668,0x019a,0x0778,0x019c,0x09aa,0x019e,0x0abb
+	cop_w (0x0192,0x0248);
+	cop_w (0x0194,0x0348);
+	cop_w (0x0196,0x0458);
+	cop_w (0x0198,0x0668);
+	cop_w (0x019a,0x0778);
+	cop_w (0x019c,0x09aa);
+	cop_w (0x019e,0x0abb);
 
-	dc.w 0x0807,0xfffe
-	dc.w 0x180,0x236
-	dc.w 0x0a07,0xfffe
-	dc.w 0x180,0x247
-	dc.w 0x0b07,0xfffe
-	dc.w 0x180,0x236
-	dc.w 0x0e07,0xfffe
-	dc.w 0x180,0x258
+	cop_w (0x0807,0xfffe);
+	cop_w (0x180,0x236);
+	cop_w (0x0a07,0xfffe);
+	cop_w (0x180,0x247);
+	cop_w (0x0b07,0xfffe);
+	cop_w (0x180,0x236);
+	cop_w (0x0e07,0xfffe);
+	cop_w (0x180,0x258);
 
-	dc.w 0x0f07,0xfffe
-	dc.w 0x180,0x236
+	cop_w (0x0f07,0xfffe);
+	cop_w (0x180,0x236);
 
-	dc.w 0x1507,0xfffe
-	dc.w 0x180,0x269
+	cop_w (0x1507,0xfffe);
+	cop_w (0x180,0x269);
 
-	dc.w 0x192,0x269
-	dc.w 0x194,0x269
-	dc.w 0x196,0x269
-	dc.w 0x198,0x269
-	dc.w 0x19a,0x269
-	dc.w 0x19c,0x269
-	dc.w 0x19e,0x269
+	cop_w (0x192,0x269);
+	cop_w (0x194,0x269);
+	cop_w (0x196,0x269);
+	cop_w (0x198,0x269);
+	cop_w (0x19a,0x269);
+	cop_w (0x19c,0x269);
+	cop_w (0x19e,0x269);
 
-	dc.w 0x1607,0xfffe
-	dc.w 0x180,0x236
+	cop_w (0x1607,0xfffe);
+	cop_w (0x180,0x236);
 
-	dc.w 0x0192,0x0248,0x0194,0x0348,0x0196,0x0458
-	dc.w 0x0198,0x0668,0x019a,0x0778,0x019c,0x09aa,0x019e,0x0abb
+	cop_w (0x0192,0x0248);
+	cop_w (0x0194,0x0348);
+	cop_w (0x0196,0x0458);
+	cop_w (0x0198,0x0668);
+	cop_w (0x019a,0x0778);
+	cop_w (0x019c,0x09aa);
+	cop_w (0x019e,0x0abb);
 
-//    ---  mirror split  ---	
-	dc.w 0x17df,0xfffe
-	dc.w 0x182,0x0468
-	dc.w 0x184,0x0235
-	dc.w 0x186,0x0358
-	dc.w 0x188,0x0689
-	dc.w 0x18a,0x069a
-	dc.w 0x18c,0x07bc
-	dc.w 0x18e,0x08dd
-	dc.w 0x108,(ScrBpl*FontBpls-320/8)-(ScrBpl*FontBpls*2)
+//    ---  mirror split  ---
 
-	dc.w 0x2007,0xfffe
-	dc.w 0x180,0x27a
-	dc.w 0x182,0x27a
-	dc.w 0x184,0x27a
-	dc.w 0x186,0x27a
-	dc.w 0x188,0x27a
-	dc.w 0x18a,0x27a
-	dc.w 0x18c,0x27a
-	dc.w 0x18e,0x27a
+	cop_w (0x17df,0xfffe);
+	cop_w (0x182,0x0468);
+	cop_w (0x184,0x0235);
+	cop_w (0x186,0x0358);
+	cop_w (0x188,0x0689);
+	cop_w (0x18a,0x069a);
+	cop_w (0x18c,0x07bc);
+	cop_w (0x18e,0x08dd);
+	cop_w (0x108,(ScrBpl*FontBpls-320/8)-(ScrBpl*FontBpls*2));
 
-	dc.w 0x192,0x27a
-	dc.w 0x194,0x27a
-	dc.w 0x196,0x27a
-	dc.w 0x198,0x27a
-	dc.w 0x19a,0x27a
-	dc.w 0x19c,0x27a
-	dc.w 0x19e,0x27a
+	cop_w (0x2007,0xfffe);
+	cop_w (0x180,0x27a);
+	cop_w (0x182,0x27a);
+	cop_w (0x184,0x27a);
+	cop_w (0x186,0x27a);
+	cop_w (0x188,0x27a);
+	cop_w (0x18a,0x27a);
+	cop_w (0x18c,0x27a);
+	cop_w (0x18e,0x27a);
 
-	dc.w 0x2107,0xfffe
-	dc.w 0x180,0x236
-	dc.w 0x182,0x0468
-	dc.w 0x184,0x0235
-	dc.w 0x186,0x0358
-	dc.w 0x188,0x0689
-	dc.w 0x18a,0x069a
-	dc.w 0x18c,0x07bc
-	dc.w 0x18e,0x08dd
+	cop_w (0x192,0x27a);
+	cop_w (0x194,0x27a);
+	cop_w (0x196,0x27a);
+	cop_w (0x198,0x27a);
+	cop_w (0x19a,0x27a);
+	cop_w (0x19c,0x27a);
+	cop_w (0x19e,0x27a);
 
-	dc.w 0x0192,0x0248,0x0194,0x0348,0x0196,0x0458
-	dc.w 0x0198,0x0668,0x019a,0x0778,0x019c,0x09aa,0x019e,0x0abb
+	cop_w (0x2107,0xfffe);
+	cop_w (0x180,0x236);
+	cop_w (0x182,0x0468);
+	cop_w (0x184,0x0235);
+	cop_w (0x186,0x0358);
+	cop_w (0x188,0x0689);
+	cop_w (0x18a,0x069a);
+	cop_w (0x18c,0x07bc);
+	cop_w (0x18e,0x08dd);
+
+	cop_w (0x0192,0x0248);
+	cop_w (0x0194,0x0348);
+	cop_w (0x0196,0x0458);
+	cop_w (0x0198,0x0668);
+	cop_w (0x019a,0x0778);
+	cop_w (0x019c,0x09aa);
+	cop_w (0x019e,0x0abb);
 
 //    ---  bottom plate stop  ---
-	dc.w 0x2c07,0xfffe
-	dc.w 0x180,0x38b
-	dc.w 0x2d07,0xfffe
-	dc.w 0x180,0x235
-	dc.w 0x2e07,0xfffe
-	dc.w 0x180,0x247
-	dc.w 0x2f07,0xfffe
-	dc.w 0x180,0x258
+
+	cop_w (0x2c07,0xfffe);
+	cop_w (0x180,0x38b);
+	cop_w (0x2d07,0xfffe);
+	cop_w (0x180,0x235);
+	cop_w (0x2e07,0xfffe);
+	cop_w (0x180,0x247);
+	cop_w (0x2f07,0xfffe);
+	cop_w (0x180,0x258);
+
 //    ---  bottom plate thickness  ---
-	dc.w 0x3007,0xfffe
-	dc.w 0x180,bgcol
 
-	dc.w 0xffff,0xfffe
-CopperE:
+	cop_w (0x3007,0xfffe);
+	cop_w (0x180,bgcol);
 
+	cop_w (0xffff,0xfffe);
+
+	CopperE = cop_ptr;
+}
+
+//********** PLAYROUTINE CODE **********
+//;Note: if this is put in its own section (or compiled as separate binary), then
+//;jsr <addr>+P61_InitOffset,P61_MusicOffset,P61_EndOffset,P61_SetPositionOffset
+//;to call the routines.
+
+//Playrtn:
+//	include "P6112/P6112-Play.i"
+
+
+void load_raw_files()
+{
 
 	load_raw("media/FastCarFont.284x100x3",&Font,&FontE);
 	load_raw("media/Cloud.112x38x3.raw",&Cloud,&CloudE);
@@ -1998,7 +2048,7 @@ CopperE:
 	load_raw("media/Cloud.48x15x3.masks.raw", 0, &Cloud3Mask, &Cloud3MaskE);
 	load_raw("P61.new_ditty", 0, &Module1, &Module1E); // usecode 0xc00b43b
 	load_raw("sky3centered.raw", (logobwid*6), &Logo, &LogoE);
-
+}
 
 //	SECTION TutBSS,BSS_C
 
