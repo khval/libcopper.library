@@ -1,5 +1,7 @@
+
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -130,43 +132,43 @@ char *ScrollPtr = ScrollText;
 extern uint16	BarBehind[];
 extern uint16	BarInFront[];
 
-uint8 *Logo;
-uint8 *LogoE;
-uint8 *Screen;
-uint8 *ScreenE;
-uint8 *Sky;
-uint8 *SkyE;
-uint8 *Sky2;
-uint8 *Sky2E;
+uint8 *Logo = NULL;
+uint8 *LogoE = NULL;
+uint8 *Screen = NULL;
+uint8 *ScreenE = NULL;
+uint8 *Sky = NULL;
+uint8 *SkyE = NULL;
+uint8 *Sky2 = NULL;
+uint8 *Sky2E = NULL;
 
-uint8 *Cloud;
-uint8 *CloudE;
-uint8 *Cloud2;
-uint8 *Cloud2E;
-uint8 *Cloud3;
-uint8 *Cloud3E;
-uint8 *CloudMask;
-uint8 *CloudMaskE;
-uint8 *Cloud2Mask;
-uint8 *Cloud2MaskE;
-uint8 *Cloud3Mask;
-uint8 *Cloud3MaskE;
+uint8 *Cloud = NULL;
+uint8 *CloudE = NULL;
+uint8 *Cloud2 = NULL;
+uint8 *Cloud2E = NULL;
+uint8 *Cloud3 = NULL;
+uint8 *Cloud3E = NULL;
+uint8 *CloudMask = NULL;
+uint8 *CloudMaskE = NULL;
+uint8 *Cloud2Mask = NULL;
+uint8 *Cloud2MaskE = NULL;
+uint8 *Cloud3Mask = NULL;
+uint8 *Cloud3MaskE = NULL;
 
-uint16 *Copper;
-uint16 *CopperE;
-uint16 *SprP;
-uint16 *CopBplP;
-uint16 *CopSkyBplP;
-uint16 *LogoPal;
-uint16 *CloudPal;
-uint16 *waitras1;
-uint16 *waitras2;
-uint16 *waitras3;
-uint16 *waitras4;
-uint16 *waitras5;
-uint16 *waitras6;
-uint16 *ScrBplP;
-uint8 *Module1;
+uint16 *Copper = NULL;
+uint16 *CopperE = NULL;
+uint16 *SprP = NULL;
+uint16 *CopBplP = NULL;
+uint16 *CopSkyBplP = NULL;
+uint16 *LogoPal = NULL;
+uint16 *CloudPal = NULL;
+uint16 *waitras1 = NULL;
+uint16 *waitras2 = NULL;
+uint16 *waitras3 = NULL;
+uint16 *waitras4 = NULL;
+uint16 *waitras5 = NULL;
+uint16 *waitras6 = NULL;
+uint16 *ScrBplP = NULL;
+uint8 *Module1 = NULL;
 
 uint32 w	=352;
 uint32 h	=256;
@@ -207,7 +209,7 @@ void PlotChar();
 void PlotBob();
 void Scrollit();
 void 	BounceScroller();
-void load_raw(const char *name, int extraSize, void **ptr, void **ptrE);
+bool load_raw(const char *name, int extraSize, void **ptr, void **ptrE);
 void WaitMouse();
 void WAITBLIT();
 
@@ -2100,19 +2102,37 @@ ScrBplP= cop_ptr;
 //	include "P6112/P6112-Play.i"
 
 
-void load_raw_files()
+bool load_raw_files()
 {
 
-	load_raw("media/FastCarFont.284x100x3",0,(void **) &Font,(void **) &FontE);
-	load_raw("media/Cloud.112x38x3.raw",0,(void **) &Cloud, (void **) &CloudE);
-	load_raw("media/Cloud.64x24x3.raw",0,(void **) &Cloud2,(void **) &Cloud2E);
-	load_raw("media/Cloud.48x15x3.raw",0,(void **) &Cloud3, (void **) &Cloud3E);
-	load_raw("media/Cloud.112x38x3.masks.raw",0, (void **) &CloudMask, (void **) &CloudMaskE);
-	load_raw("media/Cloud.64x24x3.masks.raw", 0, (void **) &Cloud2Mask, (void **) &Cloud2MaskE);
-	load_raw("media/Cloud.48x15x3.masks.raw", 0, (void **) &Cloud3Mask, (void **) &Cloud3MaskE);
-//	load_raw("P61.new_ditty", 0, (void **) &Module1, (void **) &Module1E); // usecode 0xc00b43b
-	load_raw("sky3centered.raw", (logobwid*6), (void **) &Logo, (void **) &LogoE);
+	if( ! load_raw("media/FastCarFont.284x100x3",0,(void **) &Font,(void **) &FontE)) return false;
+	if (! load_raw("media/Cloud.112x38x3.raw",0,(void **) &Cloud, (void **) &CloudE)) return false;
+	if( ! load_raw("media/Cloud.64x24x3.raw",0,(void **) &Cloud2,(void **) &Cloud2E)) return false;
+	if( ! load_raw("media/Cloud.48x15x3.raw",0,(void **) &Cloud3, (void **) &Cloud3E)) return false;
+	if( ! load_raw("media/Cloud.112x38x3.masks.raw",0, (void **) &CloudMask, (void **) &CloudMaskE)) return false;
+	if( ! load_raw("media/Cloud.64x24x3.masks.raw", 0, (void **) &Cloud2Mask, (void **) &Cloud2MaskE)) return false;
+	if( ! load_raw("media/Cloud.48x15x3.masks.raw", 0, (void **) &Cloud3Mask, (void **) &Cloud3MaskE)) return false;
+//	if( ! load_raw("P61.new_ditty", 0, (void **) &Module1, (void **) &Module1E)) return false; // usecode 0xc00b43b
+	if( ! load_raw("sky3centered.raw", (logobwid*6), (void **) &Logo, (void **) &LogoE)) return false;
+
+	return true;
 }
+
+#define smart_free(x) if (x) free(x); x=NULL;
+
+void uload_files()
+{
+	smart_free( Font );
+	smart_free( Cloud );
+	smart_free( Cloud2 );
+	smart_free( Cloud3 );
+	smart_free( CloudMask );
+	smart_free( Cloud2Mask );
+	smart_free( Cloud3Mask );
+	smart_free( Module1 );
+	smart_free( Logo );
+}
+
 
 //	SECTION TutBSS,BSS_C
 
@@ -2179,8 +2199,9 @@ Plot Cloud
 */	
 
 
-void load_raw(const char *name, int extraSize, void **ptr, void **ptrE)
+bool load_raw(const char *name, int extraSize, void **ptr, void **ptrE)
 {
+	bool success = false;
 	BPTR fd;
 	fd = FOpen( name, MODE_OLDFILE, 0  );
 	uint64 size;
@@ -2199,14 +2220,28 @@ void load_raw(const char *name, int extraSize, void **ptr, void **ptrE)
 		{
 			FRead( fd , *ptr, size ,1 );
 			*ptrE = *ptr + size;
+			success = true;
 		}
 		FClose(fd);
 	}
+
+	if ( ! success )
+	{
+		printf("failed to load %s\n",name);
+	}
+
+	return success;
 }
 
 int main()
 {
-	load_raw_files();
+	if (load_raw_files() == false)
+	{
+		printf("Failed to load files\n");
+		uload_files();
+		return 0;
+	}
+
 	init_cloud();
 	init_copper();
 	Demo();
