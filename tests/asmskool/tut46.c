@@ -1,5 +1,11 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include <proto/exec.h>
 #include <proto/dos.h>
+#include <proto/intuition.h>
+#include <proto/graphics.h>
+#include <hardware/custom.h>
 
 /*
 	SECTION TutDemo,CODE
@@ -60,8 +66,8 @@ union reg_u A0,A1,A2,A3,A4,A5,A6,A7;
 
 struct cloud
 {
-	void		*addr;
-	uint32	mask;
+	uint8		*addr;
+	uint8		*mask;
 	uint16	x,y,width,height,xspeed;
 };
 
@@ -137,14 +143,17 @@ uint8 *Cloud;
 uint8 *CloudE;
 uint8 *Cloud2;
 uint8 *Cloud2E;
+uint8 *Cloud3;
 uint8 *Cloud3E;
 uint8 *CloudMask;
 uint8 *CloudMaskE;
 uint8 *Cloud2Mask;
 uint8 *Cloud2MaskE;
+uint8 *Cloud3Mask;
 uint8 *Cloud3MaskE;
 
 uint16 *Copper;
+uint16 *CopperE;
 uint16 *SprP;
 uint16 *CopBplP;
 uint16 *CopSkyBplP;
@@ -157,7 +166,6 @@ uint16 *waitras4;
 uint16 *waitras5;
 uint16 *waitras6;
 uint16 *ScrBplP;
-
 uint8 *Module1;
 
 uint32 w	=352;
@@ -181,7 +189,7 @@ uint32 logoh		=99;
 //    ---  font dimensions  ---
 #define fontw		288
 #define fonth		100
-#define fontbpls	3
+#define FontBpls	3
 #define FontBpl	(fontw/8)
 
 #define plotY	110
@@ -199,6 +207,21 @@ void PlotChar();
 void PlotBob();
 void Scrollit();
 void 	BounceScroller();
+void load_raw(const char *name, int extraSize, void **ptr, void **ptrE);
+void WaitMouse();
+void WAITBLIT();
+
+void CloudSet( struct cloud *c,  uint8  *addr, uint8 *mask, uint16 x, uint16 y,uint16 width,uint16 height,uint16 xspeed)
+{
+	c -> addr = addr;
+	c -> mask = mask;
+	c -> x = x;
+	c -> y = y;
+	c -> width = width;
+	c -> height = height;
+	c -> xspeed = xspeed;
+};
+
 
 //********************  MACROS  ********************
 
@@ -241,11 +264,16 @@ void Demo()
 	a2 = 0;			// sub.l a2,a2
 	d0 = 0;			// moveq #0,d0
 
+#ifdef have_protracker
 	P61_Init();
+#endif
 					//	movem.l (sp)+,d0-a6
 	Main();
 					//	movem.l d0-a6,-(sp)
+
+#ifdef have_protracker
 	P61_End();
+#endif
 
 					//	movem.l (sp)+,d0-a6
 
@@ -282,7 +310,9 @@ void Main()
 #define st_w(a,v) *((uint16 *) (a)) = (uint16) (v)
 #define st_l(a,v) *((uint32 *) (a)) = (uint32) (v)
 
-uint8 *CloudCoordsLP;
+//uint8 *CloudCoordsLP;
+extern struct cloud *CloudCoordsLP[];
+
 uint8 *StarSpr;
 uint8 *StarSpr2;
 
@@ -593,12 +623,12 @@ void VBint()			//					;Blank template VERTB interrupt
 	SkyBufferL[0] = a1;
 	SkyBufferL[1] = a0;
 							//	movem.l CloudCoordsLP(PC),a0-a1
-	a0 = CloudCoordsLP[0];
-	a1 = CloudCoordsLP[1];
+	a0 = (uint32) CloudCoordsLP[0];
+	a1 = (uint32) CloudCoordsLP[1];
 							//	exg a0,a1
 							//	movem.l a0-a1,CloudCoordsLP
-	CloudCoordsLP[0] = a1;
-	CloudCoordsLP[1] = a0;
+	CloudCoordsLP[0] = (struct cloud *) a1;
+	CloudCoordsLP[1] = (struct cloud *) a0;
 
 //    *--- playfield 2 ptrs ---*
 							//	move.l SkyBufferL(PC),a0		;ptr to first bitplane of logo
@@ -809,7 +839,7 @@ void Init()											//Init:
 
 	d1=0;										//	moveq #0,d1
 	a1 = (uint32) Screen;							//	lea Screen,a1
-	d0 = bplsize*fontbpls/2-1;						//	move.w #bplsize*fontbpls/2-1,d0
+	d0 = bplsize*FontBpls/2-1;						//	move.w #bplsize*FontBpls/2-1,d0
 	for (;d0;d0--)									//.l:	move.w #0,(a1)+
 	{
 		st_w(a0,0);	a1+=2;
@@ -944,7 +974,7 @@ void Init()											//Init:
 	st_w(a1,ld_w(a1)+5);							//	addq.w #5,a1			;skip to next sprite control words
 
 	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
-	st_b(a1,ld_b(a1)+1); a1+;							//	addq.b #2,(a1)+
+	st_b(a1,ld_b(a1)+1); a1++;						//	addq.b #2,(a1)+
 	D0.b0+=1;									//	addq.b #1,d0
 	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
 	D0.b0+=1;									//	addq.b #1,d0			;increase vstop value
@@ -952,7 +982,7 @@ void Init()											//Init:
 
 //    *--- below line 0xff ---*
 
-	d6 = B00000110;								//	moveq #%00000110,d6
+	d6 = bin8(0,0,0,0,0,1,1,0);								//	moveq #%00000110,d6
 
 	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
 	st_b(a1,ld_b(a1)+1); a1++;						//	addq.b #1,(a1)+
@@ -1059,7 +1089,7 @@ void Init()											//Init:
 
 //    *--- below line 0xff ---*
 
-	d6 =	D00000110;								//	moveq #%00000110,d6
+	d6 =	bin8(0,0,0,0,0,1,1,0);								//	moveq #%00000110,d6
 
 	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
 	st_b(a1,ld_b(a1)+1); a1++;						//	addq.b #1,(a1)+
@@ -1158,7 +1188,7 @@ void 	BounceScroller()								//BounceScroller:
 	a0 += d0;									//	add.l d0,a0
 
 	a1 = (uint32) ScrBplP;							//	lea ScrBplP,a1		;where to poke the bitplane pointer words.
-	for (d0 = fontbpls-1;d0;d0--)						//	moveq #fontbpls-1,d0
+	for (d0 = FontBpls-1;d0;d0--)						//	moveq #FontBpls-1,d0
 	{											//.bpll2:	move.l a0,d1
 		d1 = a0;
 												//	swap d1
@@ -1331,25 +1361,35 @@ char FontTbl[]={
 	};
 
 
-void *CloudCoordsLP[]=			//CloudCoordsLP:
+extern struct cloud CloudCoordsL[];
+extern struct cloud CloudCoordsL2[];
+
+struct cloud *CloudCoordsLP[]=			//CloudCoordsLP:
 	{
 		CloudCoordsL,			//	dc.l CloudCoordsL
 		CloudCoordsL2			//	dc.l CloudCoordsL2
 	};
 
-/*
-struct cloud CloudCoordsL[] =							//CloudCoordsL:
-	{
-		{
+
+
+
+
+struct cloud CloudCoordsL[10]; 							//CloudCoordsL:
+struct cloud CloudCoordsL2[10];
+
+void init_cloud() 
+{
+	CloudSet(CloudCoordsL+0,		
 			Cloud3,				//	dc.l Cloud3
 			Cloud3Mask,			//	dc.l Cloud3Mask
 			90,					//	dc.w 90			;x
 			170,					//	dc.w 170		;y
 			48,					//	dc.w 48			;width
 			15,					//	dc.w 15			;height
-			1,					//	dc.w 1			;x speed
-		},
-		{
+			1					//	dc.w 1			;x speed
+		);
+
+	CloudSet(CloudCoordsL+1,
 			Cloud3,				//	dc.l Cloud3
 			Cloud3Mask,			//	dc.l Cloud3Mask
 			284,					//	dc.w 284		;x
@@ -1357,110 +1397,7 @@ struct cloud CloudCoordsL[] =							//CloudCoordsL:
 			48,					//	dc.w 48			;width
 			15,					//	dc.w 15			;height
 			1					//	dc.w 1			;x speed
-		},
-
-;	dc.l Cloud3
-;	dc.l Cloud3Mask
-;	dc.w 184		;x
-;	dc.w 135		;y
-;	dc.w 48			;width
-;	dc.w 15			;height
-;	dc.w 1			;x speed
-
-		{
-			Cloud3,				//	dc.l Cloud3
-			Cloud3Mask,			//	dc.l Cloud3Mask
-			218,					//	dc.w 218		;x
-			95,					//	dc.w 95			;y
-			48,					//	dc.w 48			;width
-			15,					//	dc.w 15			;height
-			2					//	dc.w 2			;x speed
-		},
-		{
-			Cloud2,				//	dc.l Cloud2
-			Cloud2Mask,			//	dc.l Cloud2Mask
-			320,					//	dc.w 320		;x
-			183,					//	dc.w 183		;y
-			64,					//	dc.w 64			;width
-			24,					//	dc.w 24			;height
-			2					//	dc.w 2			;x speed
-		},
-		{
-			Cloud2,				//	dc.l Cloud2
-			Cloud2Mask,			//	dc.l Cloud2Mask
-			123,					//	dc.w 123		;x
-			123,					//	dc.w 123		;y
-			64,					//	dc.w 64			;width
-			24,					//	dc.w 24			;height
-			2					//	dc.w 2			;x speed
-		},
-		{
-			Cloud2,				//	dc.l Cloud2
-			Cloud2Mask,			//	dc.l Cloud2Mask
-			220,					//	dc.w 210		;x
-			150,					//	dc.w 150		;y
-			64,					//	dc.w 64			;width
-			24,					//	dc.w 24			;height
-			2					//	dc.w 2			;x speed
-		},
-		{
-			Cloud2,				//	dc.l Cloud2
-			Cloud2Mask,			//	dc.l Cloud2Mask
-			156,					//	dc.w 156		;x
-			007,					//	dc.w 007		;y
-			64,					//	dc.w 64			;width
-			24,					//	dc.w 24			;height
-			3					//	dc.w 3			;x speed
-		},
-		{
-			Cloud,				//	dc.l Cloud
-			CloudMask,			//	dc.l CloudMask
-			240,					//	dc.w 240		;x
-			105,					//	dc.w 105		;y
-			112,					//	dc.w 112		;width
-			38,					//	dc.w 38			;height
-			3					//	dc.w 3			;x speed
-		},
-		{
-			Cloud,				//	dc.l Cloud
-			CloudMask,			//	dc.l CloudMask
-			290,					//	dc.w 290		;x
-			47,					//	dc.w 47			;y
-			112,					//	dc.w 112		;width
-			38,					//	dc.w 38			;height
-			4					//	dc.w 4			;x speed
-		},
-		{
-			Cloud,				//	dc.l Cloud
-			CloudMask,			//	dc.l CloudMask
-			0,					//	dc.w 0			;x
-			27,					//	dc.w 27			;y
-			112,					//	dc.w 112		;width
-			38,					//	dc.w 38			;height
-			5,					//	dc.w 5			;x speed
-		}
-	};
-*/
-
-								//CloudCoordsLE:
-
-CloudCoordsL2:
-
-								//	dc.l Cloud3
-								//	dc.l Cloud3Mask
-								//	dc.w 90			;x
-								//	dc.w 170		;y
-								//	dc.w 48			;width
-								//	dc.w 15			;height
-								//	dc.w 1			;x speed
-
-								//	dc.l Cloud3
-								//	dc.l Cloud3Mask
-								//	dc.w 284		;x
-								//	dc.w 199		;y
-								//	dc.w 48			;width
-								//	dc.w 15			;height
-								//	dc.w 1			;x speed
+		);
 
 //;	dc.l Cloud3
 //;	dc.l Cloud3Mask
@@ -1470,87 +1407,214 @@ CloudCoordsL2:
 //;	dc.w 15			;height
 //;	dc.w 1			;x speed
 
-								//	dc.l Cloud3
-								//	dc.l Cloud3Mask
-								//	dc.w 218		;x
-								//	dc.w 95			;y
-								//	dc.w 48			;width
-								//	dc.w 15			;height
-								//	dc.w 2			;x speed
 
-								//	dc.l Cloud2
-								//	dc.l Cloud2Mask
-								//	dc.w 320		;x
-								//	dc.w 183		;y
-								//	dc.w 64			;width
-								//	dc.w 24			;height
-								//	dc.w 2			;x speed
+	CloudSet(CloudCoordsL+2,
+			Cloud3,				//	dc.l Cloud3
+			Cloud3Mask,			//	dc.l Cloud3Mask
+			218,					//	dc.w 218		;x
+			95,					//	dc.w 95			;y
+			48,					//	dc.w 48			;width
+			15,					//	dc.w 15			;height
+			2					//	dc.w 2			;x speed
+		);
 
-								//	dc.l Cloud2
-								//	dc.l Cloud2Mask
-								//	dc.w 123		;x
-								//	dc.w 123		;y
-								//	dc.w 64			;width
-								//	dc.w 24			;height
-								//	dc.w 2			;x speed
+	CloudSet(CloudCoordsL+3,
+			Cloud2,				//	dc.l Cloud2
+			Cloud2Mask,			//	dc.l Cloud2Mask
+			320,					//	dc.w 320		;x
+			183,					//	dc.w 183		;y
+			64,					//	dc.w 64			;width
+			24,					//	dc.w 24			;height
+			2					//	dc.w 2			;x speed
+		);
 
-								//	dc.l Cloud2
-								//	dc.l Cloud2Mask
-								//	dc.w 210		;x
-								//	dc.w 150		;y
-								//	dc.w 64			;width
-								//	dc.w 24			;height
-								//	dc.w 2			;x speed
+	CloudSet(CloudCoordsL+4,
+			Cloud2,				//	dc.l Cloud2
+			Cloud2Mask,			//	dc.l Cloud2Mask
+			123,					//	dc.w 123		;x
+			123,					//	dc.w 123		;y
+			64,					//	dc.w 64			;width
+			24,					//	dc.w 24			;height
+			2					//	dc.w 2			;x speed
+		);
 
-								//	dc.l Cloud2
-								//	dc.l Cloud2Mask
-								//	dc.w 156		;x
-								//	dc.w 007		;y
-								//	dc.w 64			;width
-								//	dc.w 24			;height
-								//	dc.w 3			;x speed
+	CloudSet(CloudCoordsL+5,
+			Cloud2,				//	dc.l Cloud2
+			Cloud2Mask,			//	dc.l Cloud2Mask
+			220,					//	dc.w 210		;x
+			150,					//	dc.w 150		;y
+			64,					//	dc.w 64			;width
+			24,					//	dc.w 24			;height
+			2					//	dc.w 2			;x speed
+		);
 
-								//	dc.l Cloud
-								//	dc.l CloudMask
-								//	dc.w 240		;x
-								//	dc.w 105		;y
-								//	dc.w 112		;width
-								//	dc.w 38			;height
-								//	dc.w 3			;x speed
+	CloudSet(CloudCoordsL+6,
+			Cloud2,				//	dc.l Cloud2
+			Cloud2Mask,			//	dc.l Cloud2Mask
+			156,					//	dc.w 156		;x
+			007,					//	dc.w 007		;y
+			64,					//	dc.w 64			;width
+			24,					//	dc.w 24			;height
+			3					//	dc.w 3			;x speed
+		);
 
-								//	dc.l Cloud
-								//	dc.l CloudMask
-								//	dc.w 290		;x
-								//	dc.w 47			;y
-								//	dc.w 112		;width
-								//	dc.w 38			;height
-								//	dc.w 4			;x speed
+	CloudSet(CloudCoordsL+7,
+			Cloud,				//	dc.l Cloud
+			CloudMask,			//	dc.l CloudMask
+			240,					//	dc.w 240		;x
+			105,					//	dc.w 105		;y
+			112,					//	dc.w 112		;width
+			38,					//	dc.w 38			;height
+			3					//	dc.w 3			;x speed
+		);
 
-								//	dc.l Cloud
-								//	dc.l CloudMask
-								//	dc.w 0			;x
-								//	dc.w 27			;y
-								//	dc.w 112		;width
-								//	dc.w 38			;height
-								//	dc.w 5			;x speed
+	CloudSet(CloudCoordsL+8,
+			Cloud,				//	dc.l Cloud
+			CloudMask,			//	dc.l CloudMask
+			290,					//	dc.w 290		;x
+			47,					//	dc.w 47			;y
+			112,					//	dc.w 112		;width
+			38,					//	dc.w 38			;height
+			4					//	dc.w 4			;x speed
+		);
 
-								//CloudCoordsL2E:
+	CloudSet(CloudCoordsL+9,
+			Cloud,				//	dc.l Cloud
+			CloudMask,			//	dc.l CloudMask
+			0,					//	dc.w 0			;x
+			27,					//	dc.w 27			;y
+			112,					//	dc.w 112		;width
+			38,					//	dc.w 38			;height
+			5					//	dc.w 5			;x speed
+		);
+
+//	-------------------------------------------------------------------------------------------------------
+
+								//CloudCoordsLE:
+	CloudSet(CloudCoordsL2+0,
+			Cloud3,				//	dc.l Cloud3
+			Cloud3Mask,			//	dc.l Cloud3Mask
+			90,					//	dc.w 90			;x
+			170,					//	dc.w 170		;y
+			47,					//	dc.w 48			;width
+			15,					//	dc.w 15			;height
+			1					//	dc.w 1			;x speed
+		);
+
+	CloudSet(CloudCoordsL2+0,
+			Cloud3,				//	dc.l Cloud3
+			Cloud3Mask,			//	dc.l Cloud3Mask
+			284,					//	dc.w 284		;x
+			199,					//	dc.w 199		;y
+			48,					//	dc.w 48			;width
+			15,					//	dc.w 15			;height
+			1					//	dc.w 1			;x speed
+		);
+
+
+//;	dc.l Cloud3
+//;	dc.l Cloud3Mask
+//;	dc.w 184		;x
+//;	dc.w 135		;y
+//;	dc.w 48			;width
+//;	dc.w 15			;height
+//;	dc.w 1			;x speed
+
+	CloudSet(CloudCoordsL2+0,
+			Cloud3,				//	dc.l Cloud3
+			Cloud3Mask,			//	dc.l Cloud3Mask
+			218,					//	dc.w 218		;x
+			94,					//	dc.w 95			;y
+			48,					//	dc.w 48			;width
+			15,					//	dc.w 15			;height
+			2					//	dc.w 2			;x speed
+		);
+
+	CloudSet(CloudCoordsL2+1,
+			Cloud2,				//	dc.l Cloud2
+			Cloud2Mask,			//	dc.l Cloud2Mask
+			320,					//	dc.w 320		;x
+			183,					//	dc.w 183		;y
+			64,					//	dc.w 64			;width
+			24,					//	dc.w 24			;height
+			2					//	dc.w 2			;x speed
+		);
+
+	CloudSet(CloudCoordsL2+2,
+			Cloud2,				//	dc.l Cloud2
+			Cloud2Mask,				//	dc.l Cloud2Mask
+			123,					//	dc.w 123		;x
+			123,					//	dc.w 123		;y
+			64,					//	dc.w 64			;width
+			24,					//	dc.w 24			;height
+			2					//	dc.w 2			;x speed
+		);
+
+	CloudSet(CloudCoordsL2+3,
+			Cloud2,				//	dc.l Cloud2
+			Cloud2Mask,			//	dc.l Cloud2Mask
+			210,					//	dc.w 210		;x
+			150,					//	dc.w 150		;y
+			64,					//	dc.w 64			;width
+			24,					//	dc.w 24			;height
+			2					//	dc.w 2			;x speed
+		);
+
+	CloudSet(CloudCoordsL2+4,
+			Cloud2,				//	dc.l Cloud2
+			Cloud2Mask,			//	dc.l Cloud2Mask
+			156,					//	dc.w 156		;x
+			007,					//	dc.w 007		;y
+			64,					//	dc.w 64			;width
+			24,					//	dc.w 24			;height
+			3					//	dc.w 3			;x speed
+		);
+
+	CloudSet(CloudCoordsL2+5,
+			Cloud,				//	dc.l Cloud
+			CloudMask,			//	dc.l CloudMask
+			240,					//	dc.w 240		;x
+			105,					//	dc.w 105		;y
+			112,					//	dc.w 112		;width
+			38,					//	dc.w 38			;height
+			3					//	dc.w 3			;x speed
+		);
+
+	CloudSet(CloudCoordsL2+6,
+			Cloud,				//	dc.l Cloud
+			CloudMask,			//	dc.l CloudMask
+			290,					//	dc.w 290		;x
+			47,					//	dc.w 47			;y
+			112,					//	dc.w 112		;width
+			38,					//	dc.w 38			;height
+			4					//	dc.w 4			;x speed
+		);
+
+	CloudSet(CloudCoordsL2+7,
+			Cloud,				//	dc.l Cloud
+			CloudMask,			//	dc.l CloudMask
+			0,					//	dc.w 0			;x
+			27,					//	dc.w 27			;y
+			112,					//	dc.w 112		;width
+			38,					//	dc.w 38			;height
+			5					//	dc.w 5			;x speed
+		);
+
+//	CloudCoordsL2E = CloudCoordsL2+8;
+}
 
 								//gfxname:
 const char *gfxname = "graphics.library";	//	dc.b "graphics.library",0
 								//	EVEN
 
 
-
-
-
-
-
 //	IFD Measure
 //	MaxVpos:dc.w 0
 //	ENDC
 
-	SECTION TutData,DATA_C
+//	SECTION TutData,DATA_C
+
+/*
 StarSpr:
 .x:	SET 1
 	REPT 32
@@ -1594,7 +1658,7 @@ StarSpr2:
 .x:	SET (.x+16)&0xffff
 	ENDR
 	dc.w 0,0
-
+*/
 
 
 #define cop_w( a,b ) *cop_ptr++=(a); *cop_ptr++=(b); 
@@ -1866,12 +1930,12 @@ ScrBplP= cop_ptr;
 //;tone down clouds 1 notch
 
 	cop_w (0x0192,0x044b);
-	cop_w 0x0194,0x055b);
-	cop_w 0x0196,0x066a);
+	cop_w (0x0194,0x055b);
+	cop_w (0x0196,0x066a);
 	cop_w (0x0198,0x088a);
-	cop_w 0x019a,0x099a);
-	cop_w 0x019c,0x0bbb);
-	cop_w 0x019e,0x0ccc);
+	cop_w (0x019a,0x099a);
+	cop_w (0x019c,0x0bbb);
+	cop_w (0x019e,0x0ccc);
 
 	cop_w (0xc707,0xfffe);
 	cop_w (0x180,0x329);
@@ -2039,23 +2103,23 @@ ScrBplP= cop_ptr;
 void load_raw_files()
 {
 
-	load_raw("media/FastCarFont.284x100x3",&Font,&FontE);
-	load_raw("media/Cloud.112x38x3.raw",&Cloud,&CloudE);
-	load_raw("media/Cloud.64x24x3.raw",&Cloud2,&Cloud2E);
-	load_raw("media/Cloud.48x15x3.raw",&Cloud3,&Cloud3E);
-	load_raw("media/Cloud.112x38x3.masks.raw",&CloudMask,&CloudMaskE);
-	load_raw("media/Cloud.64x24x3.masks.raw", 0, &Cloud2Mask, &Cloud2MaskE);
-	load_raw("media/Cloud.48x15x3.masks.raw", 0, &Cloud3Mask, &Cloud3MaskE);
-	load_raw("P61.new_ditty", 0, &Module1, &Module1E); // usecode 0xc00b43b
-	load_raw("sky3centered.raw", (logobwid*6), &Logo, &LogoE);
+	load_raw("media/FastCarFont.284x100x3",0,(void **) &Font,(void **) &FontE);
+	load_raw("media/Cloud.112x38x3.raw",0,(void **) &Cloud, (void **) &CloudE);
+	load_raw("media/Cloud.64x24x3.raw",0,(void **) &Cloud2,(void **) &Cloud2E);
+	load_raw("media/Cloud.48x15x3.raw",0,(void **) &Cloud3, (void **) &Cloud3E);
+	load_raw("media/Cloud.112x38x3.masks.raw",0, (void **) &CloudMask, (void **) &CloudMaskE);
+	load_raw("media/Cloud.64x24x3.masks.raw", 0, (void **) &Cloud2Mask, (void **) &Cloud2MaskE);
+	load_raw("media/Cloud.48x15x3.masks.raw", 0, (void **) &Cloud3Mask, (void **) &Cloud3MaskE);
+//	load_raw("P61.new_ditty", 0, (void **) &Module1, (void **) &Module1E); // usecode 0xc00b43b
+	load_raw("sky3centered.raw", (logobwid*6), (void **) &Logo, (void **) &LogoE);
 }
 
 //	SECTION TutBSS,BSS_C
 
-void bss_c
+void bss_c()
 {
-	Screen = malloc( bplsize*fontbpls);
-	ScreenE = screen + (bplsize*fontbpls):
+	Screen = malloc( bplsize*FontBpls);
+	ScreenE = Screen + (bplsize*FontBpls);
 
 	Sky = malloc( skybwid*(220+1));
 	SkyE = Sky + ( skybwid*(220+1) ); 
@@ -2115,7 +2179,7 @@ Plot Cloud
 */	
 
 
-void load_raw(const char name, int extraSize, void **ptr, void **ptrE)
+void load_raw(const char *name, int extraSize, void **ptr, void **ptrE)
 {
 	BPTR fd;
 	fd = FOpen( name, MODE_OLDFILE, 0  );
@@ -2138,5 +2202,30 @@ void load_raw(const char name, int extraSize, void **ptr, void **ptrE)
 		}
 		FClose(fd);
 	}
+}
+
+int main()
+{
+	load_raw_files();
+	init_cloud();
+	init_copper();
+	Demo();
+
+	return 0;
+}
+
+// if not mistaken on vblank interrupt, stuff should happen, so this were stuff happens...
+
+void WaitMouse()
+{
+	for(;;)
+	{
+		WaitTOF();
+		VBint();		// trigger interupt...
+	}
+}
+
+void WAITBLIT()
+{
 }
 
