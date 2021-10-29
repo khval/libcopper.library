@@ -19,6 +19,8 @@ dependent_c_files += planes_shift.c
 dependent_c_files += useful_for_tests.c
 dependent_c_files += beam.c
 dependent_c_files += plot4.c
+dependent_c_files += common.c
+
 
 dependent_files = ${dependent_c_files:.c=.o}
 
