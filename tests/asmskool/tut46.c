@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
 
@@ -8,6 +9,17 @@
 #include <proto/intuition.h>
 #include <proto/graphics.h>
 #include <hardware/custom.h>
+
+#include "common.h"
+#include "render.h"
+
+#ifdef __amigaos4__
+struct Custom _custom;
+struct Custom *custom = &_custom;	// store locally... handle things with do_functions();
+#else
+struct Custom *custom = 0xDFF000;
+#endif
+
 
 /*
 	SECTION TutDemo,CODE
@@ -28,8 +40,8 @@ struct cloud
 	uint16	x,y,width,height,xspeed;
 };
 
-uint16	*Sine = NULL;											//Sine:	INCBIN "Sine.37.200.w"
-uint16	*SineEnd = NULL;										//SineEnd:
+int16	Sine[200] ;												//Sine:	INCBIN "Sine.37.200.w"
+int16	*SineEnd = Sine +200;										//SineEnd:
 
 uint8 ScrollTextWrap = 0;											//	ScrollTextWrap:
 															//		dc.b 0
@@ -208,15 +220,15 @@ void Demo()
 
 	cop_move_(0x096, 0x87e0);			//	move.w #$87e0,0xdff096
 
-	cop_move_(0x080, Copper);			//	move.l #Copper,0xdff080
+	cop_move_(0x080, (uint32) Copper);	//	move.l #Copper,0xdff080
 									//	move.l #VBint,0x6c(a4)		;set vertb interrupt vector compatibly.
 									//	move.w #0xc020,0xdff09a	;enable interrupts generally
 									//							;and vertb specifically.
 
 //    ---  Call P61_Init  ---
-									//	movem.l d0-a6,-(sp)
+	movem_push(RD0,RA6);				//	movem.l d0-a6,-(sp)
 
-	a0 = (uint32) Module1;		 //	lea Module1,a0
+	a0 = (uint32) Module1;				 //	lea Module1,a0
 	a1 = 0;			// sub.l a1,a1
 	a2 = 0;			// sub.l a2,a2
 	d0 = 0;			// moveq #0,d0
@@ -224,24 +236,24 @@ void Demo()
 #ifdef have_protracker
 	P61_Init();
 #endif
-					//	movem.l (sp)+,d0-a6
+	movem_pop(RD0,RA6);				//	movem.l (sp)+,d0-a6
 	Main();
-					//	movem.l d0-a6,-(sp)
+	movem_push(RD0,RA6);				//	movem.l d0-a6,-(sp)
 
 #ifdef have_protracker
 	P61_End();
 #endif
 
-					//	movem.l (sp)+,d0-a6
+	movem_pop(RD0,RA6);				//	movem.l (sp)+,d0-a6
 
-					//	rts			;go back to system friendly wrapper exit.
+									//	rts			;go back to system friendly wrapper exit.
 	return;
 }
 
 //********** ROUTINES **********
 void Main()
 {
-					//	movem.l d0-a6,-(sp)
+	movem_push(RD0,RA6);		//	movem.l d0-a6,-(sp)
 
 //**************************
 
@@ -253,7 +265,7 @@ void Main()
 
 //**************************
 
-					//	movem.l (sp)+,d0-a6
+	movem_pop(RD0,RA6);		//	movem.l (sp)+,d0-a6
 //	rts
 }
 
@@ -270,21 +282,28 @@ void Main()
 //uint8 *CloudCoordsLP;
 extern struct cloud *CloudCoordsLP[];
 
-uint8 *StarSpr;
-uint8 *StarSpr2;
+#ifdef have_sprite
+uint8 *StarSpr = NULL;
+uint8 *StarSpr2 = NULL;
+#endif
 
-uint8 *Font,FontE;
+uint8 *Font = NULL;
+uint8 *FontE = NULL;
 
 #define bin8(b7,b6,b5,b4,b3,b2,b1,b0) ((b7<<7) | (b6 <<6) | (b5 <<5) | (b4<<4) | (b3 <<3) | (b2<<2) | (b1<<1) | (b0))
 
 void Part1()
 {
-								//	movem.l d0-a6,-(sp)
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
+	movem_push(RD0,RA6);				//	movem.l d0-a6,-(sp)
 
  //   *--- clear clouds ---*
 
 	a1= (uint32) SkyBufferL;				// move.l SkyBufferL(PC),a1
 	a3 = (uint32) CloudCoordsLP; 			// move.l CloudCoordsLP(PC),a3
+
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 	d7 =	cloudcount-1;				// moveq #cloudcount-1,d7
 
@@ -306,15 +325,18 @@ void Part1()
 		PlotBob();
 	}							//	dbf d7,.clearl
 
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
 // @bouncescroller was here
+
+#ifdef have_sprite
 
 	a1 =(uint32) StarSpr+1;		//	lea StarSpr+1,a1
 	d0 = 0x2C;			//	moveq #0x2c,d0
-	d7= 26-1;				//	moveq #26-1,d7
-
+			
 //.skyl:	
 
-	for (;d7;d7--)
+	for (d7= 26-1;	;d7;d7--)		//	moveq #26-1,d7
 	{
 		st_b(a1, ld_b(a1)+1);	//	addq.b #1,(a1)			;add speed to hpos
 		a1+=8;				//	addq.w #8,a1			;skip to next sprite control words
@@ -404,6 +426,10 @@ void Part1()
 		a1+=8;				//	addq.w #8,a1
 	}						//	dbf d7,.floorl2
 
+#endif
+
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
 //    *--- scroller ---*
 
 							//	move.w Cmd_StopCount(PC),d0
@@ -431,132 +457,113 @@ void Part1()
 
 	}						//.skipscroll:
 
+
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
 //;@clear clouds was here
 
 	BounceScroller();			//	bsr.w BounceScroller
 
 //    *--- plot clouds ---*
 
-	a1 = *SkyBufferL;			//	move.l SkyBufferL(PC),a1
-							//	movem.l CloudCoordsLP(PC),a3-a4
-	a4+=8;					//	addq.w #8,a4
-							//	moveq #cloudcount-1,d7
+	a1 = *SkyBufferL;					//	move.l SkyBufferL(PC),a1
+	a3 = (uint32) CloudCoordsLP[0];		//	movem.l CloudCoordsLP(PC),a3-a4
+	a4 = (uint32) CloudCoordsLP[1];
+	a4+=8;							//	addq.w #8,a4
+									//	moveq #cloudcount-1,d7
 	for(d7=cloudcount-1;d7;d7--)			//.drawl:
 	{
-		a0 = ld_l(a3);	a3+=4;	//	move.l (a3)+,a0			;bob
-		a2 = ld_l(a3);	a3+=4;	//	move.l (a3)+,a2			;mask
+		a0 = ld_l(a3);	a3+=4;			//	move.l (a3)+,a0			;bob
+		a2 = ld_l(a3);	a3+=4;			//	move.l (a3)+,a2			;mask
 
-							//;	move.w (a3)+,d0			;x coord
-		a3+=2;				//	addq.w #2,a3
-		d0 = ld_w(a4);			//	move.w (a4),d0			;x coord from last frame
-		d1 = ld_w(a3);	a3+=2;	//	move.w (a3)+,d1			;y coord
-		d2 = ld_w(a3);	a3+=2;	//	move.w (a3)+,d2			;width
-		d3 = ld_w(a3);	a3+=2;	//	move.w (a3)+,d3			;height
+									//;	move.w (a3)+,d0			;x coord
+		a3+=2;						//	addq.w #2,a3
+		d0 = ld_w(a4);					//	move.w (a4),d0			;x coord from last frame
+		d1 = ld_w(a3);	a3+=2;			//	move.w (a3)+,d1			;y coord
+		d2 = ld_w(a3);	a3+=2;			//	move.w (a3)+,d2			;width
+		d3 = ld_w(a3);	a3+=2;			//	move.w (a3)+,d3			;height
 
-		d0 += ld_w(a3);		//	add.w (a3)+,d0			;x speed, move cloud
-		d5 = 320;				//	move.w #320,d5
-		d5 += d2;			//	add.w d2,d5
+		d0 += ld_w(a3);				//	add.w (a3)+,d0			;x speed, move cloud
+		d5 = 320;						//	move.w #320,d5
+		d5 += d2;					//	add.w d2,d5
 
-		if (d0>=320+112)		//	cmp.w #320+112,d0
-		{					//	blt.b .nowrapx
-			d0=-d5;			//	sub.w d5,d0
-		} 					//.nowrapx:
-		st_w(a3-10,d0);		//	move.w d0,-10(a3)		;replace coord
+		if (d0>=320+112)				//	cmp.w #320+112,d0
+		{							//	blt.b .nowrapx
+			d0=-d5;					//	sub.w d5,d0
+		} 							//.nowrapx:
+		st_w(a3-10,d0);				//	move.w d0,-10(a3)		;replace coord
 
-		d4 =0x0fca0000;		//	move.l #0x0fca0000,d4		;cookie-cut blit
-		PlotBob();				//	bsr.w PlotBob
-		a4 = cloudstructsize;	//	lea cloudstructsize(a4),a4
-	}						//	dbf d7,.drawl
+		d4 =0x0fca0000;				//	move.l #0x0fca0000,d4		;cookie-cut blit
+		PlotBob();						//	bsr.w PlotBob
+		a4 = cloudstructsize;			//	lea cloudstructsize(a4),a4
+	}								//	dbf d7,.drawl
 
 //    ---  sine lookup for raster bar vert. pos.  ---
 
-							//	lea Sine,a0
-	d6 = SineCtr;				//	move.w SineCtr,d6
-	d7 = 0x4d-6+37;			//	move.w #0x4d-6+37,d7
-	d7 += ld_w(a0 + d6);		//	add.w (a0,d6.w),d7
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
-	d6+=2;					//	addq.w #2,d6
-	if (d6>SineEnd-Sine)			//	cmp.w #SineEnd-Sine,d6
-	{						//	blt.s .nowrap2
-		d6 = 0;				//	moveq #0,d6
-	}						//.nowrap2:
-	SineCtr = d6;				//	move.w d6,SineCtr
+	a0 = Sine;					//	lea Sine,a0
+	d6 = SineCtr;					//	move.w SineCtr,d6
+	d7 = 0x4d-6+37;				//	move.w #0x4d-6+37,d7
+	d7 += ld_w(a0 + d6);			//	add.w (a0,d6.w),d7
+
+	d6+=2;						//	addq.w #2,d6
+	if (d6>SineEnd-Sine)				//	cmp.w #SineEnd-Sine,d6
+	{							//	blt.s .nowrap2
+		d6 = 0;					//	moveq #0,d6
+	}							//.nowrap2:
+	SineCtr = d6;					//	move.w d6,SineCtr
 
 
-							//    ---  in front or behind flag  ---
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
-	a2 = (uint32) BarInFront;		//	lea BarInFront,a2	;default source address for RGB color values 
-	if ((d6<50*2)				//	cmp.w #50*2,d6
-		|| (d6>150*2)) 			//	blt.s .behind			// if (d6<50*2) goto .behind
-	{						//	cmp.w #150*2,d6
+								//    ---  in front or behind flag  ---
+
+	a2 = (uint32) BarInFront;			//	lea BarInFront,a2	;default source address for RGB color values 
+	if ((d6<50*2)					//	cmp.w #50*2,d6
+		|| (d6>150*2)) 				//	blt.s .behind			// if (d6<50*2) goto .behind
+	{							//	cmp.w #150*2,d6
 		a2 = (uint32) BarBehind;		//	bge.s .behind			// if (d6>150*2) goto .behind
-	}						//	bra.s .cont
-							//.behind:
-							//	lea BarBehind,a2
-							//.cont:
+	}							//	bra.s .cont
+								//.behind:
+								//	lea BarBehind,a2
+								//.cont:
 
-	a0 = (uint32) waitras1;				//	lea waitras1,a0
-	d0 = d7;					//	move d7,d0
-	d1 = 6-1;					//	moveq #6-1,d1
-							//.l:
+	a0 = (uint32) waitras1;			//	lea waitras1,a0
+	d0 = d7;						//	move d7,d0
+						
+								//.l:
 
-	for ( ; d1; d1--)
+	for (d1 = 6-1; d1; d1--)					//	moveq #6-1,d1
 	{
-		st_b(a0,d0);				//	move.b d0,(a0)
-		d0++;					//	addq.w #1,d0
+		st_b(a0,d0);						//	move.b d0,(a0)
+		d0++;							//	addq.w #1,d0
 
-		d2=ld_w(a2);	a2+=2;		//	move.w (a2)+,d2			;background color from list
-		st_w(a0+6,d2);				//	move.w d2,6(a0)
-							//	move.w (a2)+,6+4*1(a0)
-		st_w(a0+(6+4*1), ld_w(a2));	
-		a2 += 2;
-							//	move.w (a2)+,6+4*2(a0)
-		st_w(a0+(6+4*2), ld_w(a2));	
-		a2 += 2;
-							//	move.w (a2)+,6+4*3(a0)
-		st_w(a0+(6+4*3), ld_w(a2));	
-		a2 += 2;
-							//	move.w (a2)+,6+4*4(a0)
-		st_w(a0+(6+4*4), ld_w(a2));	
-		a2 += 2;
-							//	move.w (a2)+,6+4*5(a0)
-		st_w(a0+(6+4*5), ld_w(a2));	
-		a2 += 2;
-							//	move.w (a2)+,6+4*6(a0)
-		st_w(a0+(6+4*6), ld_w(a2));	
-		a2 += 2;
-							//	move.w (a2)+,6+4*7(a0)
-		st_w(a0+(6+4*7), ld_w(a2));	
-		a2 += 2;
+		d2=ld_w(a2);	a2+=2;				//	move.w (a2)+,d2			;background color from list
+		st_w(a0+6,d2);						//	move.w d2,6(a0)
+										
+		st_w(a0+(6+4*1), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*1(a0)
+		st_w(a0+(6+4*2), ld_w(a2)); a2 += 2; 	//	move.w (a2)+,6+4*2(a0)
 
+		st_w(a0+(6+4*3), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*3(a0)
+		st_w(a0+(6+4*4), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*4(a0)
+		st_w(a0+(6+4*5), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*5(a0)
+		st_w(a0+(6+4*6), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*6(a0)
+		st_w(a0+(6+4*7), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*7(a0)
 
-							//	move.w (a2)+,6+4*8(a0)		;2nd playfield
-		st_w(a0+(6+4*8), ld_w(a2));	
-		a2 += 2;
-							//	move.w (a2)+,6+4*9(a0)
-		st_w(a0+(6+4*9), ld_w(a2));	
-		a2 += 2;
-							//	move.w (a2)+,6+4*10(a0)
-		st_w(a0+(6+4*10), ld_w(a2));	
-		a2 += 2;
-							//	move.w (a2)+,6+4*11(a0)
-		st_w(a0+(6+4*11), ld_w(a2));	
-		a2 += 2;
-							//	move.w (a2)+,6+4*12(a0)
-		st_w(a0+(6+4*12), ld_w(a2));	
-		a2 += 2;
-							//	move.w (a2)+,6+4*13(a0)
-		st_w(a0+(6+4*13), ld_w(a2));	
-		a2 += 2;
-							//	move.w (a2)+,6+4*14(a0)
-		st_w(a0+(6+4*14), ld_w(a2));	
-		a2 += 2;
-							//	add.w #4*(9+7),a0		;step to next.
-		a0 = 4*(9+7);
+		st_w(a0+(6+4*8), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*8(a0)		;2nd playfield
+		st_w(a0+(6+4*9), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*9(a0)
+		st_w(a0+(6+4*10), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*10(a0)
+		st_w(a0+(6+4*11), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*11(a0)
+		st_w(a0+(6+4*12), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*12(a0)
+		st_w(a0+(6+4*13), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*13(a0)
+		st_w(a0+(6+4*14), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*14(a0)
+			
+		a0 = 4*(9+7);						//	add.w #4*(9+7),a0		;step to next.
 							//	DBF d1,.l
 	}
 
-							//;	movem.l (sp)+,d0-a6
+	movem_pop(RD0,RA6);		//;	movem.l (sp)+,d0-a6
 //	rts
 }
 
@@ -565,8 +572,8 @@ void VBint()			//					;Blank template VERTB interrupt
 {
 	// --- will call this on every.
 
-							//	movem.l d0-a6,-(sp)		;Save used registers
-			;				//	lea 0xdff000,a6
+	movem_push(RD0,RA6);		//	movem.l d0-a6,-(sp)		;Save used registers
+	a6 = (uint32) custom;				//	lea 0xdff000,a6
 							//	btst #5,0x1f(a6)			;INTREQR check if it's our vertb int.
 							//	beq.s .notvb
 
@@ -702,7 +709,7 @@ void PlotChar()										//PlotChar:	;a0=scrollptr
 												//	move.w #ScrBpl-col,BLTDMOD(a6)
 
 												//	move.w #20*3*64+2,BLTSIZE(a6)
-												//;	movem.l (sp)+,d0-a6
+	movem_pop(RD0,RA6);							//;	movem.l (sp)+,d0-a6
 }												//	rts
 
 /*
@@ -715,6 +722,11 @@ void PlotChar()										//PlotChar:	;a0=scrollptr
 
 void PlotBob()										//PlotBob:		;d0-d3/a0-a2=x,y,width,h,src,dest,mask,BLTCON0+1.l
 {												//	movem.l d0-d3/d5/a1,-(sp)
+	movem_push(RD0,RD3);
+	movem_push(RD5,RD5);
+	movem_push(RA1,RA1);
+
+
 	D2.lw+=15;									//	add.w #15,d2			;round up
 	D2.lw >>=4;									//	lsr.w #4,d2			;word width
 
@@ -760,6 +772,9 @@ void PlotBob()										//PlotBob:		;d0-d3/a0-a2=x,y,width,h,src,dest,mask,BLTCO
 												//	move.w d2,BLTDMOD(a6)
 												//	move.w d3,BLTSIZE(a6)
 												//	movem.l (sp)+,d0-d3/d5/a1
+	movem_pop(RA1,RA1);
+	movem_pop(RD5,RD5);
+	movem_pop(RD0,RD3);
 }												//	rts
 
 
@@ -777,7 +792,7 @@ void Scrollit()										//Scrollit:
 #define bltskip	0
 #define brcorner (blth*ScrBpl*3-2)
 
-												//;	movem.l d0-a6,-(sp)
+	//movem_push(RD0,RA6);						//;	movem.l d0-a6,-(sp)
 												//	lea 0xdff000,a6
 	WAITBLIT();									//	WAITBLIT
 												//	move.l #0x49f00002,BLTCON0(a6)
@@ -788,27 +803,34 @@ void Scrollit()										//Scrollit:
 												//	move.w #bltskip,BLTDMOD(a6)
 
 												//	move.w #blth*3*64+bltw,BLTSIZE(a6)
-												//;	movem.l (sp)+,d0-a6
+	//movem_pop(RD0,RA6);							//;	movem.l (sp)+,d0-a6
 }												//	rts
 
 void Init()											//Init:
 {												//	movem.l d0-a6,-(sp)
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
+	movem_push(RD0,RA6);
+
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 	d1=0;										//	moveq #0,d1
 	a1 = (uint32) Screen;							//	lea Screen,a1
 	d0 = bplsize*FontBpls/2-1;						//	move.w #bplsize*FontBpls/2-1,d0
-	for (;d0;d0--)									//.l:	move.w #0,(a1)+
+	for (;d0;d0--)									//.l:	
 	{
-		st_w(a0,0);	a1+=2;
+		st_w(a1,0);	a1+=2;						//	move.w #0,(a1)+
 		D1.lw += 1;								//	addq.w #1,d1
 	}											//	dbf d0,.l
 
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
 												//	lea Sky,a1
 												//	lea Sky2,a2		;clear 2nd buffer also
 												//	lea SkyBufferL(PC),a3
 	SkyBufferL[0] = (uint32) Sky;						//	move.l a1,(a3)+
 	SkyBufferL[1] = (uint32) Sky2;						//	move.l a2,(a3)+		;Double-buffer list initialized
 
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 	a1 = (uint32) Sky;								//	lea Sky,a1
 	a2 = (uint32) Sky2;								//	lea Sky2,a2		;clear 2nd buffer also
@@ -823,6 +845,8 @@ void Init()											//Init:
 		st_l(a2,d0); a2+=4;							//	move.l d0,(a2)+
 		st_l(a2,d0); a2+=4;							//	move.l d0,(a2)+
 	}											//	dbf d7,.l7
+
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 //    *--- playfield 1 ptrs ---*
 
@@ -840,6 +864,8 @@ void Init()											//Init:
 		a0 += logobpl;								//	lea logobpl(a0),a0
 	}											//	dbf d0,.bpll
 
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
 //    *--- playfield 2 ptrs ---*
 
 	a0 = (uint32) Sky +14;							//	lea Sky+14,a0		;ptr to first bitplane of logo
@@ -856,6 +882,11 @@ void Init()											//Init:
 		a0 = SkyBpl + a0;							//	lea skybpl(a0),a0
 	}											//	dbf d0,.bpll2
 
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
+
+#ifdef have_sprite
+
 	a1 = (uint32) SprP;								//	lea SprP,a1
 	a0 = (uint32) StarSpr;							//	lea StarSpr,a0
 	d1 = a0;										//	move.l a0,d1
@@ -869,6 +900,10 @@ void Init()											//Init:
 		d1+= (StarSpr2-StarSpr);						//	add.l #(StarSpr2-StarSpr),d1 
 	}											//	dbf d0,.sprpl	
 
+#endif
+
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
 	a0 = (uint32) NullSpr;							//	lea NullSpr,a0
 	d1 = a0;										//	move.l a0,d1
 	for (d0 = 6 - 1;d0;d0--)							//	moveq #6-1,d0
@@ -880,14 +915,25 @@ void Init()											//Init:
 		a1 += 8;									//	addq.w #8,a1
 	}											//	DBF d0,.sprpl2
 
-	a0 =	(uint32) FontE-7*2;							//	lea FontE-7*2,a0
-	a1 =	(uint32) FontPalP+2;						//	lea FontPalP+2,a1
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
+	printf("FontE: %08x\n",FontE);
+	printf("FontPalP: %08x\n",FontPalP);
+
+	a0 =	((uint32) FontE)-7*2;							//	lea FontE-7*2,a0
+	a1 =	((uint32) FontPalP)+2;						//	lea FontPalP+2,a1
+
 	for(d0=7-1;d0;d0--)								//	moveq #7-1,d0
-	{											//.coll:	move.w (a0)+,(a1)+
+	{											//.coll:
+		st_w(a1,ld_w(a0)); a0+=2; a1+=2;				//	move.w (a0)+,(a1)+
 		a1+=2;									//	addq.w #2,a1
 	}											//	DBF d0,.coll
 
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
 //    *--- initialize sprites ---*
+
+#ifdef have_sprite
 
 	a1 = (uint32) StarSpr;							//	lea StarSpr,a1
 	d0 = 0x2c;									//	moveq #0x2c,d0
@@ -923,6 +969,8 @@ void Init()											//Init:
 
 	}											//	dbf d7,.skyl
 
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
 	st_b(a1,d0); a1++;								//	move.b d0,(a1)+			;vstart
 	st_b(a1,ld_b(a1)+1); a1++;						//	addq.b #1,(a1)+			;add speed to hpos
 	D0.b0+=1;									//	addq.b #1,d0			;increase vstop value
@@ -936,6 +984,8 @@ void Init()											//Init:
 	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
 	D0.b0+=1;									//	addq.b #1,d0			;increase vstop value
 	st_w(a1,ld_w(a1)+5);							//	addq.w #5,a1
+
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 //    *--- below line 0xff ---*
 
@@ -956,6 +1006,8 @@ void Init()											//Init:
 	D0.b0+=1;									//	addq.b #1,d0			;increase vstop value
 	st_b(a1,d6); a1++;								//	move.b d6,(a1)+
 	a1+=4;										//	addq.w #4,a1			;skip to next sprite control words
+
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 	for(d7=5-1;d7;d7--)								//	moveq #5-1,d7
 	{											//.floorl:	
@@ -993,6 +1045,8 @@ void Init()											//Init:
 
 	}											//	dbf d7,.floorl
 
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
 //    *--- odd lines sprites ---*
 
 	a1 = (uint32) StarSpr2;							//	lea StarSpr2,a1
@@ -1029,6 +1083,8 @@ void Init()											//Init:
 
 	}											//	dbf d7,.skyl2
 
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
 	st_b(a1,d0); a1++;								//	move.b d0,(a1)+			;vstart
 	st_b(a1,ld_b(a1)+1); a1++;						//	addq.b #1,(a1)+			;add speed to hpos
 	D0.b0++;										//	addq.b #1,d0			;increase vstop value
@@ -1046,6 +1102,8 @@ void Init()											//Init:
 
 //    *--- below line 0xff ---*
 
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
 	d6 =	bin8(0,0,0,0,0,1,1,0);								//	moveq #%00000110,d6
 
 	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
@@ -1056,6 +1114,8 @@ void Init()											//Init:
 	st_b(a1,d6); a1++;								//	move.b d6,(a1)+
 	a1+=4;										//	addq.w #4,a1			;skip to next sprite control words
 
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
 	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
 	st_b(a1,ld_b(a1)+3); a1++;						//	addq.b #3,(a1)+
 	D0.b0++;										//	addq.b #1,d0
@@ -1063,6 +1123,8 @@ void Init()											//Init:
 	D0.b0++;										//	addq.b #1,d0			;increase vstop value
 	st_b(a1,d6); a1++;								//	move.b d6,(a1)+
 	a1+=4;										//	addq.w #4,a1			;skip to next sprite control words
+
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 	for(d7=5-1;d7;d7--)								//	moveq #5-1,d7
 	{											//.floorl2:
@@ -1100,7 +1162,11 @@ void Init()											//Init:
 
 	}											//	dbf d7,.floorl2
 
-												//	movem.l (sp)+,d0-a6
+#endif
+
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
+	movem_pop(RD0,RA6);							//	movem.l (sp)+,d0-a6
 }												//	rts
 
 void CopyB()										//CopyB:	;d0,a0,a1=count,source,destination
@@ -1122,6 +1188,8 @@ BlitWait:
 
 void 	BounceScroller()								//BounceScroller:
 {												//	MOVEM.L D0-D1/A0-A1,-(SP)
+	movem_push(RD0,RD1);
+	movem_push(RA0,RA1);
 
 	a0 = (uint32) Screen;							//	lea Screen,a0		;ptr to first bitplane of font
 	d0 = BounceY;									//	move.w BounceY(PC),d0
@@ -1158,6 +1226,8 @@ void 	BounceScroller()								//BounceScroller:
 	}											//	dbf d0,.bpll2
 
 												//	MOVEM.L (SP)+,D0-D1/A0-A1
+	movem_pop(RA0,RA1);
+	movem_pop(RD0,RD1);
 }												//	RTS
 
 												//	even
@@ -1571,51 +1641,52 @@ const char *gfxname = "graphics.library";	//	dc.b "graphics.library",0
 
 //	SECTION TutData,DATA_C
 
-/*
-StarSpr:
-.x:	SET 1
-	REPT 32
-.tmpx:	SET ((.x*0x751+0xdeadbeef)/(.x&0x55))&0xff
-	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
-	dc.w 0x8000,0x0000
-.x:	SET (.x+2)&0xffff
-.tmpx:	SET ((.x*0x753+0xeadbeefd)/(.x&0x55))&0xff
-	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
-	dc.w 0x0000,0x8000
-.x:	SET (.x+4)&0xffff
-.tmpx:	SET ((.x*0x755+0xadbeefde)/(.x&0x55))&0xff
-	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
-	dc.w 0x8000,0x0000
-.x:	SET (.x+8)&0xffff
-.tmpx:	SET ((.x*0x757+0xdbeefdea)/(.x&0x55))&0xff
-	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
-	dc.w 0xc000,0xc000
-.x:	SET (.x+16)&0xffff
-	ENDR
-	dc.w 0,0
 
-StarSpr2:
-.x:	SET 0x77
-	REPT 32
-.tmpx:	SET ((.x*0x751+0xdeadbeef)/(.x&0x55))&0xff
-	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
-	dc.w 0x8000,0x0000
-.x:	SET (.x+2)&0xffff
-.tmpx:	SET ((.x*0x753+0xeadbeefd)/(.x&0x55))&0xff
-	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
-	dc.w 0x0000,0x8000
-.x:	SET (.x+4)&0xffff
-.tmpx:	SET ((.x*0x755+0xadbeefde)/(.x&0x55))&0xff
-	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
-	dc.w 0x8000,0x0000
-.x:	SET (.x+8)&0xffff
-.tmpx:	SET ((.x*0x757+0xdbeefdea)/(.x&0x55))&0xff
-	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
-	dc.w 0xc000,0xc000
-.x:	SET (.x+16)&0xffff
-	ENDR
-	dc.w 0,0
-*/
+#ifdef have_sprite
+							//StarSpr:
+							//.x:	SET 1
+							//	REPT 32
+							//.tmpx:	SET ((.x*0x751+0xdeadbeef)/(.x&0x55))&0xff
+							//	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
+							//	dc.w 0x8000,0x0000
+							//.x:	SET (.x+2)&0xffff
+							//.tmpx:	SET ((.x*0x753+0xeadbeefd)/(.x&0x55))&0xff
+							//	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
+							//	dc.w 0x0000,0x8000
+							//.x:	SET (.x+4)&0xffff
+							//.tmpx:	SET ((.x*0x755+0xadbeefde)/(.x&0x55))&0xff
+							//	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
+							//	dc.w 0x8000,0x0000
+							//.x:	SET (.x+8)&0xffff
+							//.tmpx:	SET ((.x*0x757+0xdbeefdea)/(.x&0x55))&0xff
+							//	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
+							//	dc.w 0xc000,0xc000
+							//.x:	SET (.x+16)&0xffff
+							//	ENDR
+							//	dc.w 0,0
+
+							//StarSpr2:
+							//.x:	SET 0x77
+							//	REPT 32
+							//.tmpx:	SET ((.x*0x751+0xdeadbeef)/(.x&0x55))&0xff
+							//	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
+							//	dc.w 0x8000,0x0000
+							//.x:	SET (.x+2)&0xffff
+							//.tmpx:	SET ((.x*0x753+0xeadbeefd)/(.x&0x55))&0xff
+							//	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
+							//	dc.w 0x0000,0x8000
+							//.x:	SET (.x+4)&0xffff
+							//.tmpx:	SET ((.x*0x755+0xadbeefde)/(.x&0x55))&0xff
+							//	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
+							//	dc.w 0x8000,0x0000
+							//.x:	SET (.x+8)&0xffff
+							//.tmpx:	SET ((.x*0x757+0xdbeefdea)/(.x&0x55))&0xff
+							//	dc.w 0x2c00+.tmpx,0x2d00	;Vstart.b,Hstart/2.b,Vstop.b,%A0000SEH
+							//	dc.w 0xc000,0xc000
+							//.x:	SET (.x+16)&0xffff
+							//	ENDR
+							//	dc.w 0,0
+#endif
 
 
 #define cop_w( a,b ) *cop_ptr++=(a); *cop_ptr++=(b); 
@@ -2188,8 +2259,25 @@ bool load_raw(const char *name, int extraSize, void **ptr, void **ptrE)
 	return success;
 }
 
+extern union reg_u *emu_stack_ptr;
+union reg_u emu_stack[10000];
+
+void init_sin()
+{
+	int i;
+	for (i = 0; i < SineEnd - Sine ; i++)
+	{
+
+	}
+}
+
 int main()
 {
+	if (open_libs() == false)
+	{
+		close_libs();
+	}
+
 	if (load_raw_files() == false)
 	{
 		printf("Failed to load files\n");
@@ -2197,9 +2285,17 @@ int main()
 		return 0;
 	}
 
+	// setup fake stack pointer.. :-)
+	emu_stack_ptr = emu_stack;
+
+	bss_c();
 	init_cloud();
 	init_copper();
+
 	Demo();
+
+	uload_files();
+	close_libs();
 
 	return 0;
 }
@@ -2208,10 +2304,15 @@ int main()
 
 void WaitMouse()
 {
+	printf("%s:%d\n",__FUNCTION__,__LINE__);
+
 	for(;;)
 	{
+		printf("%s:%d\n",__FUNCTION__,__LINE__);
 		WaitTOF();
+		printf("%s:%d\n",__FUNCTION__,__LINE__);
 		VBint();		// trigger interupt...
+		printf("%s:%d\n",__FUNCTION__,__LINE__);
 	}
 }
 
