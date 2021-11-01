@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -33,12 +34,15 @@ struct Custom *custom = 0xDFF000;
 //    ---  screen buffer dimensions  ---
 
 
+#pragma pack(push,2)
 struct cloud
 {
 	uint8		*addr;
 	uint8		*mask;
 	uint16	x,y,width,height,xspeed;
 };
+#pragma pack(pop)
+
 
 int16	Sine[200] ;												//Sine:	INCBIN "Sine.37.200.w"
 int16	*SineEnd = Sine +200;										//SineEnd:
@@ -301,7 +305,7 @@ void Part1()
  //   *--- clear clouds ---*
 
 	a1= (uint32) SkyBufferL;				// move.l SkyBufferL(PC),a1
-	a3 = (uint32) CloudCoordsLP; 			// move.l CloudCoordsLP(PC),a3
+	a3 = (uint32) CloudCoordsLP[0]; 		// move.l CloudCoordsLP(PC),a3
 
 	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
@@ -470,20 +474,22 @@ void Part1()
 	a3 = (uint32) CloudCoordsLP[0];		//	movem.l CloudCoordsLP(PC),a3-a4
 	a4 = (uint32) CloudCoordsLP[1];
 	a4+=8;							//	addq.w #8,a4
-									//	moveq #cloudcount-1,d7
-	for(d7=cloudcount-1;d7;d7--)			//.drawl:
+								//	moveq #cloudcount-1,d7
+	for(d7=cloudcount;d7;d7--)			//.drawl:
 	{
 		a0 = ld_l(a3);	a3+=4;			//	move.l (a3)+,a0			;bob
 		a2 = ld_l(a3);	a3+=4;			//	move.l (a3)+,a2			;mask
 
 									//;	move.w (a3)+,d0			;x coord
 		a3+=2;						//	addq.w #2,a3
+
 		d0 = ld_w(a4);					//	move.w (a4),d0			;x coord from last frame
+
 		d1 = ld_w(a3);	a3+=2;			//	move.w (a3)+,d1			;y coord
 		d2 = ld_w(a3);	a3+=2;			//	move.w (a3)+,d2			;width
 		d3 = ld_w(a3);	a3+=2;			//	move.w (a3)+,d3			;height
 
-		d0 += ld_w(a3);				//	add.w (a3)+,d0			;x speed, move cloud
+		d0 += ld_w(a3); a3+=2;			//	add.w (a3)+,d0			;x speed, move cloud
 		d5 = 320;						//	move.w #320,d5
 		d5 += d2;					//	add.w d2,d5
 
@@ -494,15 +500,16 @@ void Part1()
 		st_w(a3-10,d0);				//	move.w d0,-10(a3)		;replace coord
 
 		d4 =0x0fca0000;				//	move.l #0x0fca0000,d4		;cookie-cut blit
+
 		PlotBob();						//	bsr.w PlotBob
-		a4 = cloudstructsize;			//	lea cloudstructsize(a4),a4
+		a4 += cloudstructsize;			//	lea cloudstructsize(a4),a4
 	}								//	dbf d7,.drawl
 
 //    ---  sine lookup for raster bar vert. pos.  ---
 
 	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
-	a0 = Sine;					//	lea Sine,a0
+	a0 = (uint32) Sine;					//	lea Sine,a0
 	d6 = SineCtr;					//	move.w SineCtr,d6
 	d7 = 0x4d-6+37;				//	move.w #0x4d-6+37,d7
 	d7 += ld_w(a0 + d6);			//	add.w (a0,d6.w),d7
@@ -559,7 +566,7 @@ void Part1()
 		st_w(a0+(6+4*13), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*13(a0)
 		st_w(a0+(6+4*14), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*14(a0)
 			
-		a0 = 4*(9+7);						//	add.w #4*(9+7),a0		;step to next.
+		a0 += 4*(9+7);					//	add.w #4*(9+7),a0		;step to next.
 							//	DBF d1,.l
 	}
 
@@ -1528,7 +1535,7 @@ void init_cloud()
 			1					//	dc.w 1			;x speed
 		);
 
-	CloudSet(CloudCoordsL2+0,
+	CloudSet(CloudCoordsL2+1,
 			Cloud3,				//	dc.l Cloud3
 			Cloud3Mask,			//	dc.l Cloud3Mask
 			284,					//	dc.w 284		;x
@@ -1547,7 +1554,7 @@ void init_cloud()
 //;	dc.w 15			;height
 //;	dc.w 1			;x speed
 
-	CloudSet(CloudCoordsL2+0,
+	CloudSet(CloudCoordsL2+2,
 			Cloud3,				//	dc.l Cloud3
 			Cloud3Mask,			//	dc.l Cloud3Mask
 			218,					//	dc.w 218		;x
@@ -1557,7 +1564,7 @@ void init_cloud()
 			2					//	dc.w 2			;x speed
 		);
 
-	CloudSet(CloudCoordsL2+1,
+	CloudSet(CloudCoordsL2+3,
 			Cloud2,				//	dc.l Cloud2
 			Cloud2Mask,			//	dc.l Cloud2Mask
 			320,					//	dc.w 320		;x
@@ -1567,7 +1574,7 @@ void init_cloud()
 			2					//	dc.w 2			;x speed
 		);
 
-	CloudSet(CloudCoordsL2+2,
+	CloudSet(CloudCoordsL2+4,
 			Cloud2,				//	dc.l Cloud2
 			Cloud2Mask,				//	dc.l Cloud2Mask
 			123,					//	dc.w 123		;x
@@ -1577,7 +1584,7 @@ void init_cloud()
 			2					//	dc.w 2			;x speed
 		);
 
-	CloudSet(CloudCoordsL2+3,
+	CloudSet(CloudCoordsL2+5,
 			Cloud2,				//	dc.l Cloud2
 			Cloud2Mask,			//	dc.l Cloud2Mask
 			210,					//	dc.w 210		;x
@@ -1587,7 +1594,7 @@ void init_cloud()
 			2					//	dc.w 2			;x speed
 		);
 
-	CloudSet(CloudCoordsL2+4,
+	CloudSet(CloudCoordsL2+6,
 			Cloud2,				//	dc.l Cloud2
 			Cloud2Mask,			//	dc.l Cloud2Mask
 			156,					//	dc.w 156		;x
@@ -1597,7 +1604,7 @@ void init_cloud()
 			3					//	dc.w 3			;x speed
 		);
 
-	CloudSet(CloudCoordsL2+5,
+	CloudSet(CloudCoordsL2+7,
 			Cloud,				//	dc.l Cloud
 			CloudMask,			//	dc.l CloudMask
 			240,					//	dc.w 240		;x
@@ -1607,7 +1614,7 @@ void init_cloud()
 			3					//	dc.w 3			;x speed
 		);
 
-	CloudSet(CloudCoordsL2+6,
+	CloudSet(CloudCoordsL2+8,
 			Cloud,				//	dc.l Cloud
 			CloudMask,			//	dc.l CloudMask
 			290,					//	dc.w 290		;x
@@ -1617,7 +1624,7 @@ void init_cloud()
 			4					//	dc.w 4			;x speed
 		);
 
-	CloudSet(CloudCoordsL2+7,
+	CloudSet(CloudCoordsL2+9,
 			Cloud,				//	dc.l Cloud
 			CloudMask,			//	dc.l CloudMask
 			0,					//	dc.w 0			;x
@@ -2265,9 +2272,9 @@ union reg_u emu_stack[10000];
 void init_sin()
 {
 	int i;
-	for (i = 0; i < SineEnd - Sine ; i++)
+	for (i = 0; i < (SineEnd - Sine) ; i++)
 	{
-
+		Sine[i] = sin( 2*M_PI * (double) i / (double) (SineEnd - Sine) ) * 127;
 	}
 }
 
@@ -2288,6 +2295,7 @@ int main()
 	// setup fake stack pointer.. :-)
 	emu_stack_ptr = emu_stack;
 
+	init_sin();
 	bss_c();
 	init_cloud();
 	init_copper();
