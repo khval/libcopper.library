@@ -9,6 +9,7 @@
 #include <proto/dos.h>
 #include <proto/intuition.h>
 #include <proto/graphics.h>
+#include <proto/libblitter.h>
 #include <hardware/custom.h>
 
 #include "common.h"
@@ -21,6 +22,19 @@ struct Custom *custom = &_custom;	// store locally... handle things with do_func
 struct Custom *custom = 0xDFF000;
 #endif
 
+#define BLTCON0 0x040
+#define BLTAFWM 0x044
+
+#define BLTAPTH 0x052
+#define BLTBPTH 0x04C
+#define BLTCPTH 0x048
+#define BLTDPTH 0x054
+
+#define BLTAMOD 0x064
+#define BLTBMOD 0x062 
+#define BLTCMOD 0x060
+#define BLTDMOD 0x066
+#define BLTSIZE 0x058
 
 /*
 	SECTION TutDemo,CODE
@@ -654,7 +668,8 @@ void VBint()			//					;Blank template VERTB interrupt
 void PlotChar()										//PlotChar:	;a0=scrollptr
 {												//;	movem.l d0-a6,-(sp)
 	a0 = (uint32) ScrollPtr;									//	move.l ScrollPtr(PC),a0
-												//	lea 0xdff000,a6
+
+	a6 = custom;									//	lea 0xdff000,a6
 
 												//	moveq #0,d0
 	d0 = ld_b(a0); a0++;							//	move.b (a0)+,d0			;ASCII value
@@ -708,14 +723,18 @@ void PlotChar()										//PlotChar:	;a0=scrollptr
 	d0 += (uint32) Font;							//	add.l #Font,d0
 
 	WAITBLIT();									//	WAITBLIT
-												//	move.l #0x09f00000,BLTCON0(a6)
-												//	move.l #0xffffffff,BLTAFWM(a6)
-												//	move.l d0,BLTAPTH(a6)
-												//	move.l #Screen+ScrBpl*3*plotY+plotX/8,BLTDPTH(a6)
-	// Add Blitter.library here!!!						//	move.w #FontBpl-col,BLTAMOD(a6)
-												//	move.w #ScrBpl-col,BLTDMOD(a6)
 
-												//	move.w #20*3*64+2,BLTSIZE(a6)
+	st_l(a6+BLTCON0, 0x09f00000);					//	move.l #0x09f00000,BLTCON0(a6)
+	st_l(a6+BLTAFWM, 0xFFFFFFFF);					//	move.l #0xffffffff,BLTAFWM(a6)
+	st_l(a6+BLTAPTH, d0);							//	move.l d0,BLTAPTH(a6)
+	st_l(a6+BLTDPTH, Screen+ScrBpl*3*plotY+plotX/8)	;	//	move.l #Screen+ScrBpl*3*plotY+plotX/8,BLTDPTH(a6)
+	st_w(a6+BLTAMOD, FontBpl-col);					//	move.w #FontBpl-col,BLTAMOD(a6)
+	st_w(a6+BLTDMOD, ScrBpl-col);					//	move.w #ScrBpl-col,BLTDMOD(a6)
+
+	st_w(a6+BLTSIZE, 20*3*64+2);					//	move.w #20*3*64+2,BLTSIZE(a6)
+
+	doBlitter( custom );
+
 	movem_pop(RD0,RA6);							//;	movem.l (sp)+,d0-a6
 }												//	rts
 
@@ -768,18 +787,20 @@ void PlotBob()										//PlotBob:		;d0-d3/a0-a2=x,y,width,h,src,dest,mask,BLTCO
 
 	WAITBLIT();									//	WAITBLIT
 
-												//	move.l d5,BLTCON0(a6)
-												//	move.l #0xffffffff,BLTAFWM(a6)
-												//	move.l a2,BLTAPTH(a6)
-	// add libblitter.library here							//	move.l a0,BLTBPTH(a6)
-												//	move.l a1,BLTCPTH(a6)
-												//	move.l a1,BLTDPTH(a6)
-												//	clr.l BLTBMOD(a6)
-												//	move.w d2,BLTCMOD(a6)
-												//	move.w d2,BLTDMOD(a6)
-												//	move.w d3,BLTSIZE(a6)
-												//	movem.l (sp)+,d0-d3/d5/a1
-	movem_pop(RA1,RA1);
+	st_l(a6+BLTCON0, d5);							//	move.l d5,BLTCON0(a6)
+	st_l(a6+BLTAFWM, 0xFFFFFFFF);					//	move.l #0xffffffff,BLTAFWM(a6)
+	st_l(a6+BLTAPTH, d0);							//	move.l a2,BLTAPTH(a6)
+	st_l(a6+BLTBPTH, d0);							//	move.l a0,BLTBPTH(a6)
+	st_l(a6+BLTCPTH, d0);							//	move.l a1,BLTCPTH(a6)
+	st_l(a6+BLTDPTH, d0);							//	move.l a1,BLTDPTH(a6)
+	st_l(a6+BLTBMOD,0);							//	clr.l BLTBMOD(a6)
+	st_w(a6+BLTCMOD, d2);							//	move.w d2,BLTCMOD(a6)
+	st_w(a6+BLTDMOD, d2);							//	move.w d2,BLTDMOD(a6)
+	st_w(a6+BLTSIZE, d3);							//	move.w d3,BLTSIZE(a6)
+
+	doBlitter( custom );	// activate blitter...
+					
+	movem_pop(RA1,RA1);							//	movem.l (sp)+,d0-d3/d5/a1
 	movem_pop(RD5,RD5);
 	movem_pop(RD0,RD3);
 }												//	rts
@@ -2278,6 +2299,24 @@ void init_sin()
 	}
 }
 
+// --- setup program, cleanup, etc...
+
+struct Window *win = NULL;
+struct BitMap *copperBitmap = NULL;
+
+void	cleanup()
+{
+	if (win) CloseWindow(win); 
+	if (copperBitmap) FreeBitMap( copperBitmap ); 
+
+	win = NULL;
+	copperBitmap = NULL;
+
+	uload_files();
+	close_libs();
+}
+
+
 int main()
 {
 	if (open_libs() == false)
@@ -2288,7 +2327,30 @@ int main()
 	if (load_raw_files() == false)
 	{
 		printf("Failed to load files\n");
-		uload_files();
+		cleanup();
+		return 0;
+	}
+
+	win = OpenWindowTags( NULL, 
+		WA_IDCMP,IDCMP_MOUSEBUTTONS,
+		WA_Left,320,
+		WA_Top,20,
+		WA_Width, 640 + 128,
+		WA_Height, 480 + 128,
+		TAG_END);
+
+
+	if (!win)
+	{
+		cleanup();
+		return 0;
+	}
+
+	copperBitmap =AllocBitMap( win -> Width, win -> Height, 32, BMF_DISPLAYABLE, win ->RPort -> BitMap);
+
+	if (! copperBitmap)
+	{
+		cleanup();
 		return 0;
 	}
 
@@ -2302,25 +2364,31 @@ int main()
 
 	Demo();
 
-	uload_files();
-	close_libs();
+	cleanup();
 
-	return 0;
 }
+
 
 // if not mistaken on vblank interrupt, stuff should happen, so this were stuff happens...
 
 void WaitMouse()
 {
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
-	for(;;)
+	bool running = true;
+	ULONG sig;
+	if (win -> UserPort)
 	{
-		printf("%s:%d\n",__FUNCTION__,__LINE__);
-		WaitTOF();
-		printf("%s:%d\n",__FUNCTION__,__LINE__);
-		VBint();		// trigger interupt...
-		printf("%s:%d\n",__FUNCTION__,__LINE__);
+		ULONG win_mask = 1 << win -> UserPort ->mp_SigBit ;
+
+ 		do
+		{
+			WaitTOF();
+			VBint();		// trigger interupt...
+			render_copper( custom, Copper,  copperBitmap );
+			BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
+
+			sig = SetSignal( 0L, win_mask | SIGBREAKF_CTRL_C );
+			if (sig & win_mask) if (checkMouse(win, 1)) running = false;
+		} while (running);
 	}
 }
 
