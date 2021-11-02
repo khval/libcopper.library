@@ -168,11 +168,13 @@ int main_prog()
 {
 	int y;
 	bool quit = false;
+	ULONG sig;
 
 	Printf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	if (initScreen())
 	{
+		ULONG win_mask = 1 << win -> UserPort ->mp_SigBit ;
 		ULONG backrgb;
 
 		int linestart=0;
@@ -192,10 +194,10 @@ int main_prog()
    			BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
 
          		/* Check & clear CTRL_C signal */
-			if(SetSignal(0L,SIGBREAKF_CTRL_C) & SIGBREAKF_CTRL_C)
-		         {
-                			quit = true;
-		         }
+			sig = SetSignal(0L, win_mask | SIGBREAKF_CTRL_C);
+
+			if (sig & win_mask) if (checkMouse(win, 1)) quit = true;
+		         if (sig & SIGBREAKF_CTRL_C ) quit = true;
 
 			WaitTOF();
 		}
