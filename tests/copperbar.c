@@ -70,7 +70,17 @@ bool initScreen()
 
 	copperBitmap =AllocBitMap( win -> Width, win -> Height, 32, BMF_DISPLAYABLE, win ->RPort -> BitMap);
 
-	if (!copperBitmap) return false;
+	if (copperBitmap) 
+	{
+			struct RastPort rp;
+
+			InitRastPort(&rp);
+
+			rp.BitMap = copperBitmap;
+
+			RectFillColor(&rp, 0, 0, win -> Width, win -> Height, 0xFF000000);
+	}
+	else return false;
 
 	return true;
 }
