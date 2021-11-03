@@ -12,7 +12,7 @@ typedef unsigned short uint16;
 
 // Display Window
 
-#define DIWSTART 0x08C
+#define DIWSTART 0x08E
 #define DIWSTOP 0x090
 
 // Data Fetch, (is in clocks, 4 in lowres, 8 in hires)
