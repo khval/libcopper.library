@@ -312,16 +312,12 @@ uint8 *FontE = NULL;
 
 void Part1()
 {
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
 	movem_push(RD0,RA6);				//	movem.l d0-a6,-(sp)
 
  //   *--- clear clouds ---*
 
 	a1= (uint32) SkyBufferL;				// move.l SkyBufferL(PC),a1
 	a3 = (uint32) CloudCoordsLP[0]; 		// move.l CloudCoordsLP(PC),a3
-
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 	d7 =	cloudcount-1;				// moveq #cloudcount-1,d7
 
@@ -342,8 +338,6 @@ void Part1()
 
 		PlotBob();
 	}							//	dbf d7,.clearl
-
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 // @bouncescroller was here
 
@@ -446,8 +440,6 @@ void Part1()
 
 #endif
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
 //    *--- scroller ---*
 
 							//	move.w Cmd_StopCount(PC),d0
@@ -460,13 +452,13 @@ void Part1()
 		d2=32;				//	moveq #32,d2
 		d0= LastChar;			//	move.b LastChar(PC),d0
 							//	cmp.b #'I',d0
-		if (d0 != (uint32) 'I')		//	bne.s .noi
+		if (d0 == (uint32) 'I')		//	bne.s .noi
 			d2=16;			//	moveq #16,d2
 							//.noi:
 		d0 =	ScrollCtr;			//	move.w ScrollCtr(PC),d0
 		d0 +=4;				//	addq.w #4,d0
 							//	cmp.w d2,d0
-		if (d0>=d2)			//	blo.s .nowrap
+		if (d0>=d2)			//	blo.s .nowrap		// branch on less then
 		{
 			PlotChar();		//	bsr.w PlotChar			;preserves a0
 			d0=0;			//	clr.w d0
@@ -475,8 +467,6 @@ void Part1()
 
 	}						//.skipscroll:
 
-
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 //;@clear clouds was here
 
@@ -488,7 +478,8 @@ void Part1()
 	a3 = (uint32) CloudCoordsLP[0];		//	movem.l CloudCoordsLP(PC),a3-a4
 	a4 = (uint32) CloudCoordsLP[1];
 	a4+=8;							//	addq.w #8,a4
-								//	moveq #cloudcount-1,d7
+	
+									//	moveq #cloudcount-1,d7
 	for(d7=cloudcount;d7;d7--)			//.drawl:
 	{
 		a0 = ld_l(a3);	a3+=4;			//	move.l (a3)+,a0			;bob
@@ -508,7 +499,7 @@ void Part1()
 		d5 += d2;					//	add.w d2,d5
 
 		if (d0>=320+112)				//	cmp.w #320+112,d0
-		{							//	blt.b .nowrapx
+		{							//	blt.b .nowrapx				// branch less then
 			d0=-d5;					//	sub.w d5,d0
 		} 							//.nowrapx:
 		st_w(a3-10,d0);				//	move.w d0,-10(a3)		;replace coord
@@ -521,22 +512,18 @@ void Part1()
 
 //    ---  sine lookup for raster bar vert. pos.  ---
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
 	a0 = (uint32) Sine;					//	lea Sine,a0
 	d6 = SineCtr;					//	move.w SineCtr,d6
 	d7 = 0x4d-6+37;				//	move.w #0x4d-6+37,d7
 	d7 += ld_w(a0 + d6);			//	add.w (a0,d6.w),d7
 
 	d6+=2;						//	addq.w #2,d6
-	if (d6>SineEnd-Sine)				//	cmp.w #SineEnd-Sine,d6
-	{							//	blt.s .nowrap2
+	if (d6>=SineEnd-Sine)			//	cmp.w #SineEnd-Sine,d6
+	{							//	blt.s .nowrap2				// branch less then
 		d6 = 0;					//	moveq #0,d6
 	}							//.nowrap2:
 	SineCtr = d6;					//	move.w d6,SineCtr
 
-
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 								//    ---  in front or behind flag  ---
 
@@ -550,12 +537,13 @@ void Part1()
 								//	lea BarBehind,a2
 								//.cont:
 
+
 	a0 = (uint32) waitras1;			//	lea waitras1,a0
 	d0 = d7;						//	move d7,d0
 						
 								//.l:
 
-	for (d1 = 6-1; d1; d1--)					//	moveq #6-1,d1
+	for (d1 = 6; d1; d1--)						//	moveq #6-1,d1
 	{
 		st_b(a0,d0);						//	move.b d0,(a0)
 		d0++;							//	addq.w #1,d0
@@ -623,7 +611,7 @@ void VBint()			//					;Blank template VERTB interrupt
 							//	lea 14(a0),a0
 	a0 = ld_l(14+a0);
 							//	move #3-1,d0
-	for(d0 = 3-1;d0;d0--)
+	for(d0 = 3;d0;d0--)
 	{
 							//.bpll2:
 		d1 = a0;				//	move.l a0,d1
@@ -673,7 +661,7 @@ void PlotChar()										//PlotChar:	;a0=scrollptr
 
 												//	moveq #0,d0
 	d0 = ld_b(a0); a0++;							//	move.b (a0)+,d0			;ASCII value
-	if (32==d0)									//	cmp.b #32,d0
+	if (d0<32)										//	cmp.b #32,d0				; branch higher or same.
 	{											//	bhs.s .char
 												//.commands:
 		switch (d0)								//	tst.b d0
@@ -704,6 +692,8 @@ void PlotChar()										//PlotChar:	;a0=scrollptr
 
 		}
 	}											//.char:
+
+	printf("%c\n",d0);
 
 	
 	ScrollPtr = (void *) a0;							//	move.l a0,ScrollPtr
@@ -789,10 +779,10 @@ void PlotBob()										//PlotBob:		;d0-d3/a0-a2=x,y,width,h,src,dest,mask,BLTCO
 
 	st_l(a6+BLTCON0, d5);							//	move.l d5,BLTCON0(a6)
 	st_l(a6+BLTAFWM, 0xFFFFFFFF);					//	move.l #0xffffffff,BLTAFWM(a6)
-	st_l(a6+BLTAPTH, d0);							//	move.l a2,BLTAPTH(a6)
-	st_l(a6+BLTBPTH, d0);							//	move.l a0,BLTBPTH(a6)
-	st_l(a6+BLTCPTH, d0);							//	move.l a1,BLTCPTH(a6)
-	st_l(a6+BLTDPTH, d0);							//	move.l a1,BLTDPTH(a6)
+	st_l(a6+BLTAPTH, a2);							//	move.l a2,BLTAPTH(a6)
+	st_l(a6+BLTBPTH, a0);							//	move.l a0,BLTBPTH(a6)
+	st_l(a6+BLTCPTH, a1);							//	move.l a1,BLTCPTH(a6)
+	st_l(a6+BLTDPTH, a1);							//	move.l a1,BLTDPTH(a6)
 	st_l(a6+BLTBMOD,0);							//	clr.l BLTBMOD(a6)
 	st_w(a6+BLTCMOD, d2);							//	move.w d2,BLTCMOD(a6)
 	st_w(a6+BLTDMOD, d2);							//	move.w d2,BLTDMOD(a6)
@@ -821,16 +811,20 @@ void Scrollit()										//Scrollit:
 #define brcorner (blth*ScrBpl*3-2)
 
 	//movem_push(RD0,RA6);						//;	movem.l d0-a6,-(sp)
-												//	lea 0xdff000,a6
-	WAITBLIT();									//	WAITBLIT
-												//	move.l #0x49f00002,BLTCON0(a6)
-												//	move.l #0xffffffff,BLTAFWM(a6)
-												//	move.l #Screen+bltoffs+brcorner,BLTAPTH(a6)
-	// add blitter.library here.											//	move.l #Screen+bltoffs+brcorner,BLTDPTH(a6)
-												//	move.w #bltskip,BLTAMOD(a6)
-												//	move.w #bltskip,BLTDMOD(a6)
 
-												//	move.w #blth*3*64+bltw,BLTSIZE(a6)
+	a6 = custom;									//	lea 0xdff000,a6
+	WAITBLIT();									//	WAITBLIT
+	st_l(a6+BLTCON0, 0x49f00002);					//	move.l #0x49f00002,BLTCON0(a6)
+	st_l(a6+BLTAFWM, 0xFFFFFFFF);					//	move.l #0xffffffff,BLTAFWM(a6)
+	st_l(a6+BLTAPTH, a1);							//	move.l #Screen+bltoffs+brcorner,BLTAPTH(a6)
+	st_l(a6+BLTDPTH, a1);							//	move.l #Screen+bltoffs+brcorner,BLTDPTH(a6)
+	st_w(a6+BLTAMOD, bltskip);						//	move.w #bltskip,BLTAMOD(a6)
+	st_w(a6+BLTDMOD, bltskip);						//	move.w #bltskip,BLTDMOD(a6)
+
+	st_w(a6+BLTSIZE, blth*3*64+bltw);					//	move.w #blth*3*64+bltw,BLTSIZE(a6)
+
+	doBlitter( custom );	// activate blitter...
+
 	//movem_pop(RD0,RA6);							//;	movem.l (sp)+,d0-a6
 }												//	rts
 
@@ -1723,22 +1717,23 @@ void init_copper()
 {
 	uint16 *cop_ptr;
 
-Copper = malloc( 200  * 2 );
+Copper = malloc(  700 * 2 );
 
 cop_ptr = Copper;
 
 	cop_w (0x1fc,0);		//			;slow fetch mode, AGA compatibility
 	cop_w (0x100,0x0200);
-	cop_w (0x08e,0x2c81);
-	cop_w (0x090,0x2cc1);
-	cop_w (0x092,0x38);
-	cop_w (0x094,0xd0);
+	cop_w (0x08e,0x2c81);	// DIWSTART
+	cop_w (0x090,0x2cc1);	// DIWSTOP
 
-	cop_w (0x108,logobwid-logobpl);
-	cop_w (0x10a,skybwid-320/8);
+	cop_w (0x092,0x38);	// DDFSTART
+	cop_w (0x094,0xd0);	// DDFSTOP
 
-	cop_w (0x102,0);
-	cop_w (0x104,0x20);
+	cop_w (0x108,logobwid-logobpl);	// BPL1MOD
+	cop_w (0x10a,skybwid-320/8);		// BPL2MOD
+
+	cop_w (0x102,0);			// BPLCON1
+	cop_w (0x104,0x20);		// BPLCON2
 
 	cop_w (0x1a2,0x99b);	//			;sprite colors
 	cop_w (0x1a4,0xcce);
@@ -2145,6 +2140,8 @@ ScrBplP= cop_ptr;
 	cop_w (0xffff,0xfffe);
 
 	CopperE = cop_ptr;
+
+	printf("copper size is: %d\n", CopperE - Copper);
 }
 
 //********** PLAYROUTINE CODE **********
@@ -2192,6 +2189,8 @@ void uload_files()
 
 void bss_c()
 {
+	printf("size of screen: %d\n",bplsize*FontBpls);
+
 	Screen = malloc( bplsize*FontBpls);
 	ScreenE = Screen + (bplsize*FontBpls);
 
@@ -2346,9 +2345,18 @@ int main()
 		return 0;
 	}
 
+	ActivateWindow(win);
+
 	copperBitmap =AllocBitMap( win -> Width, win -> Height, 32, BMF_DISPLAYABLE, win ->RPort -> BitMap);
 
-	if (! copperBitmap)
+	if (copperBitmap) 
+	{
+		struct RastPort rp;
+		InitRastPort(&rp);
+		rp.BitMap = copperBitmap;
+		RectFillColor(&rp, 0, 0, win -> Width, win -> Height, 0xFF666666);
+	}
+	else
 	{
 		cleanup();
 		return 0;
