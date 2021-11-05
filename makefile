@@ -32,6 +32,7 @@ elf_files += tests/CopperSplit.c
 elf_files += tests/OSCopper.c
 elf_files += tests/copperTest.c
 elf_files += tests/ramjam/lezione5d2.c
+elf_files += tests/asmskool/tut7.c
 elf_files += tests/asmskool/tut46.c
 
 elf_files_elf = ${elf_files:.c=.elf}
