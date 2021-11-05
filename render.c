@@ -355,7 +355,7 @@ void cop_skip(union cop data)
 
 void cop_move(union cop data)
 {
-//	printf("Cop_move Reg %04x, data %04x\n",data.d16.a,data.d16.b);
+//	DebugPrintF("Cop_move Reg %04x, data %04x\n",data.d16.a,data.d16.b);
 
 	switch ( data.d16.a )
 	{
@@ -527,6 +527,9 @@ void __render2()
 
 				beam_y++;
 				draw_y = (beam_y-display_y)*display_scale_y;
+
+
+//				DebugPrintF("bream_y: %d color0: %08x\n", beam_y, ecs2argb[0].argb);
 
 				if ((draw_y<0) || (draw_y>480))
 				{
