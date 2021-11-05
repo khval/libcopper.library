@@ -816,11 +816,10 @@ void Scrollit()										//Scrollit:
 	WAITBLIT();									//	WAITBLIT
 	st_l(a6+BLTCON0, 0x49f00002);					//	move.l #0x49f00002,BLTCON0(a6)
 	st_l(a6+BLTAFWM, 0xFFFFFFFF);					//	move.l #0xffffffff,BLTAFWM(a6)
-	st_l(a6+BLTAPTH, a1);							//	move.l #Screen+bltoffs+brcorner,BLTAPTH(a6)
-	st_l(a6+BLTDPTH, a1);							//	move.l #Screen+bltoffs+brcorner,BLTDPTH(a6)
+	st_l(a6+BLTAPTH, Screen+bltoffs+brcorner);			//	move.l #Screen+bltoffs+brcorner,BLTAPTH(a6)
+	st_l(a6+BLTDPTH, Screen+bltoffs+brcorner);			//	move.l #Screen+bltoffs+brcorner,BLTDPTH(a6)
 	st_w(a6+BLTAMOD, bltskip);						//	move.w #bltskip,BLTAMOD(a6)
 	st_w(a6+BLTDMOD, bltskip);						//	move.w #bltskip,BLTDMOD(a6)
-
 	st_w(a6+BLTSIZE, blth*3*64+bltw);					//	move.w #blth*3*64+bltw,BLTSIZE(a6)
 
 	doBlitter( custom );	// activate blitter...
@@ -2338,7 +2337,6 @@ int main()
 		WA_Height, 480 + 128,
 		TAG_END);
 
-
 	if (!win)
 	{
 		cleanup();
@@ -2364,6 +2362,8 @@ int main()
 
 	// setup fake stack pointer.. :-)
 	emu_stack_ptr = emu_stack;
+
+	init_ecs2colors();		// don't forget to make the lookup table.
 
 	init_sin();
 	bss_c();
@@ -2391,13 +2391,15 @@ void WaitMouse()
 		{
 			WaitTOF();
 			VBint();		// trigger interupt...
-			render_copper( custom, Copper,  copperBitmap );
+			render_copper( custom, (uint32 *) Copper,  copperBitmap );
 			BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
 
 			sig = SetSignal( 0L, win_mask | SIGBREAKF_CTRL_C );
 			if (sig & win_mask) if (checkMouse(win, 1)) running = false;
 		} while (running);
 	}
+
+	dump_copper( (uint32 *) Copper );
 }
 
 void WAITBLIT()
