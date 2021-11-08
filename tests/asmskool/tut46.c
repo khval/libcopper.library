@@ -348,7 +348,7 @@ void Part1()
 			
 //.skyl:	
 
-	for (d7= 26-1;	;d7;d7--)		//	moveq #26-1,d7
+	for (d7= 26;	;d7;d7--)		//	moveq #26-1,d7
 	{
 		st_b(a1, ld_b(a1)+1);	//	addq.b #1,(a1)			;add speed to hpos
 		a1+=8;				//	addq.w #8,a1			;skip to next sprite control words
@@ -377,7 +377,7 @@ void Part1()
 
 //.floorl:
 	
-	for (d7=5-1;d7;d7--)				//	moveq #5-1,d7
+	for (d7=5;d7;d7--)				//	moveq #5-1,d7
 	{
 		st_b(a1, ld_b(a1)+1);		//	addq.b #1,(a1)			;add speed to hpos
 		a1+=8;					//	addq.w #8,a1
@@ -396,7 +396,7 @@ void Part1()
 
 //.skyl2:	
 
-	for (d7=26-1;d7;d7--)			//	moveq #26-1,d7
+	for (d7=26;d7;d7--)			//	moveq #26-1,d7
 	{
 		st_b(a1, ld_b(a1)+1);		//	addq.b #1,(a1)			;add speed to hpos
 		a1+=8;					//	addq.w #8,a1			;skip to next sprite control words
@@ -426,7 +426,7 @@ void Part1()
 							//	moveq #5-1,d7
 							//.floorl2:	
 	
-	for(d7=5-1;d7;d7--)
+	for(d7=5;d7;d7--)
 	{
 		st_b(a1, ld_b(a1)+1);	//	addq.b #1,(a1)			;add speed to hpos
 		a1+=8;				//	addq.w #8,a1
@@ -837,7 +837,7 @@ void Init()											//Init:
 
 	d1=0;										//	moveq #0,d1
 	a1 = (uint32) Screen;							//	lea Screen,a1
-	d0 = bplsize*FontBpls/2-1;						//	move.w #bplsize*FontBpls/2-1,d0
+	d0 = bplsize*FontBpls/2;						//	move.w #bplsize*FontBpls/2-1,d0
 	for (;d0;d0--)									//.l:	
 	{
 		st_w(a1,0);	a1+=2;						//	move.w #0,(a1)+
@@ -857,7 +857,7 @@ void Init()											//Init:
 	a2 = (uint32) Sky2;								//	lea Sky2,a2		;clear 2nd buffer also
 
 	d0=0;										//	moveq #0,d0		;clear buffers
-	d7= (SkyE-Sky)/8-1;								//	move.w #(SkyE-Sky)/8-1,d7
+	d7= (SkyE-Sky)/8;								//	move.w #(SkyE-Sky)/8-1,d7
 
 	for (;d7;d7--)
 	{
@@ -873,7 +873,7 @@ void Init()											//Init:
 
 	a0 = (uint32) Logo;								//	lea Logo,a0		;ptr to first bitplane of logo
 	a1 = (uint32) CopBplP;							//	lea CopBplP,a1		;where to poke the bitplane pointer words.
-	for(d0=3-1;d0;d0--)								//	move #3-1,d0
+	for(d0=3;d0;d0--)								//	move #3-1,d0
 	{											//.bpll:
 		d1 = a0;									//	move.l a0,d1
 		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
@@ -891,7 +891,7 @@ void Init()											//Init:
 
 	a0 = (uint32) Sky +14;							//	lea Sky+14,a0		;ptr to first bitplane of logo
 	a1 = (uint32) CopSkyBplP;						//	lea CopSkyBplP,a1	;where to poke the bitplane pointer words.
-	for (d0=3-1;d0;d0--)								//	move #3-1,d0
+	for (d0=3;d0;d0--)								//	move #3-1,d0
 	{											//.bpll2:
 		d1 = a0;									//	move.l a0,d1
 		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
@@ -911,7 +911,7 @@ void Init()											//Init:
 	a1 = (uint32) SprP;								//	lea SprP,a1
 	a0 = (uint32) StarSpr;							//	lea StarSpr,a0
 	d1 = a0;										//	move.l a0,d1
-	for (d0 = 2-1;d0;d0--);							//	moveq #2-1,d0
+	for (d0 = 2;d0;d0--);							//	moveq #2-1,d0
 	{											//.sprpl:	
 		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
 		st_w(a1+2,d1);								//	move.w d1,2(a1)
@@ -944,7 +944,7 @@ void Init()											//Init:
 	a0 =	((uint32) FontE)-7*2;							//	lea FontE-7*2,a0
 	a1 =	((uint32) FontPalP)+2;						//	lea FontPalP+2,a1
 
-	for(d0=7-1;d0;d0--)								//	moveq #7-1,d0
+	for(d0=7;d0;d0--)								//	moveq #7-1,d0
 	{											//.coll:
 		st_w(a1,ld_w(a0)); a0+=2; a1+=2;				//	move.w (a0)+,(a1)+
 		a1+=2;									//	addq.w #2,a1
@@ -958,7 +958,7 @@ void Init()											//Init:
 
 	a1 = (uint32) StarSpr;							//	lea StarSpr,a1
 	d0 = 0x2c;									//	moveq #0x2c,d0
-	for (d7 = 26-1;d7;d7--)							//	moveq #26-1,d7
+	for (d7 = 26;d7;d7--)							//	moveq #26-1,d7
 	{											//.skyl:	
 		st_b(a1,d0); a1++;							//	move.b d0,(a1)+			;vstart
 		st_b(a1,ld_b(a1)+1); a1++;					//	addq.b #1,(a1)+			;add speed to hpos
@@ -1030,7 +1030,7 @@ void Init()											//Init:
 
 	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
-	for(d7=5-1;d7;d7--)								//	moveq #5-1,d7
+	for(d7=5;d7;d7--)								//	moveq #5-1,d7
 	{											//.floorl:	
 		st_b(a1,d0); a1++;							//	move.b d0,(a1)+			;vstart
 		st_b(a1,ld_b(a1)+1); a1++;					//	addq.b #1,(a1)+			;add speed to hpos
@@ -1072,7 +1072,7 @@ void Init()											//Init:
 
 	a1 = (uint32) StarSpr2;							//	lea StarSpr2,a1
 	d0 = 0x2d;									//	moveq #0x2d,d0
-	for(d7=26-1;d7;d7--)							//	moveq #26-1,d7
+	for(d7=26;d7;d7--)							//	moveq #26-1,d7
 	{											//.skyl2:
 		st_b(a1,d0); a1++;							//	move.b d0,(a1)+			;vstart
 		st_b(a1,ld_b(a1)+1); a1++;					//	addq.b #1,(a1)+			;add speed to hpos
@@ -1147,7 +1147,7 @@ void Init()											//Init:
 
 	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
-	for(d7=5-1;d7;d7--)								//	moveq #5-1,d7
+	for(d7=5;d7;d7--)								//	moveq #5-1,d7
 	{											//.floorl2:
 		st_b(a1,d0); a1++;							//	move.b d0,(a1)+			;vstart
 		st_b(a1,ld_b(a1)+1); a1++;					//	addq.b #1,(a1)+			;add speed to hpos
@@ -1234,7 +1234,7 @@ void 	BounceScroller()								//BounceScroller:
 	a0 += d0;									//	add.l d0,a0
 
 	a1 = (uint32) ScrBplP;							//	lea ScrBplP,a1		;where to poke the bitplane pointer words.
-	for (d0 = FontBpls-1;d0;d0--)						//	moveq #FontBpls-1,d0
+	for (d0 = FontBpls;d0;d0--)						//	moveq #FontBpls-1,d0
 	{											//.bpll2:	move.l a0,d1
 		d1 = a0;
 												//	swap d1
