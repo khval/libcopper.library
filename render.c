@@ -63,6 +63,8 @@ void setPalette(int index,uint32 argb)
 
 uint32 first_addr;
 uint32 last_addr;
+uint32 ywaitmask;
+uint32 xwaitmask;
 
 void update_ddf( int is_hires );
 
@@ -193,13 +195,16 @@ uint32 clock_speed;
 uint32 mi_disp = 0x40;
 uint32 ma_disp = 0x80;
 
-uint32 wait_beam = 0x0000;
-uint32 wait_beam_enable = 0x7FFF;
+uint8 ywait_beam = 0x0000;
+uint8 xwait_beam = 0x0000;
+
+uint8 ywait_beam_enable = 0xFF;
+uint8 xwait_beam_enable = 0x7F;
+
 
 static uint32 offset;
-static uint32_t lbeam_x,lbeam_y;
-
-uint32_t beam_x,beam_y;
+union ubeam  lbeam_x, lbeam_y;
+union ubeam beam_x,beam_y;
 
 uint64 *dest_data = NULL;
 char *beam_source_data = NULL;
@@ -320,26 +325,41 @@ void 	update_routines( int planes )
 
 void cop_wait(union cop data)
 {
+//	DebugPrintF("wait Cop: %08x at beam_y %d\n",data.d32, beam_y.b0);
+
 	if (data.d32 == 0xFFFFFFFE)
 	{
-		if (beam_y >= 255)
+		if (beam_y.b32 >= 255)
 		{
-			wait_beam = (286 - 255) << 7 | 0x7C ;
-			wait_beam_enable = 0x7FFF;
+			ywait_beam = (286 - 255);
+			xwait_beam = 0x7C ;
+
+			ywait_beam_enable = 0xFF;
+			xwait_beam_enable = 0x7F;
 			return;
 		}
 	}
 
-	// x is 7bit, bit 0 used for somethng else..
-	wait_beam_enable = data.d16.b >> 1;
 
-	if (wait_beam_enable != 0)
+	ywait_beam = data.d16.a >> 8;
+	xwait_beam = data.d16.a >> 1 & 0x7F;
+
+	// x is 7bit, bit 0 used for somethng else..
+	ywait_beam_enable = data.d16.b >> 8;
+	xwait_beam_enable = data.d16.b >> 1 & 0x7F;
+
+	if ((ywait_beam_enable != 0) && (xwait_beam_enable != 0))
 	{
 		// x is 7bit, bit 0 used for somethng else..
-
-		wait_beam = (data.d16.a  >> 1) & wait_beam_enable;
+		ywait_beam = (data.d16.a >> 8 ) & ywait_beam_enable;
+		xwait_beam = (data.d16.a >> 7) & xwait_beam_enable;
 	}
-	else wait_beam_enable = wait_beam;
+	else
+	{
+		// x is 7bit, bit 0 used for somethng else..
+		ywait_beam_enable = data.d16.a >> 8;
+		xwait_beam_enable = data.d16.a >> 1 & 0x7F;
+	}
 }
 
 void cop_skip(union cop data)
@@ -483,20 +503,55 @@ struct ffdpart *bInfo;
 
 void __render2()
 {
+	int dwy;
+
 	int sxy,wxy;
 	int final;
 
-	sxy = (beam_y * beam_bpr + beam_x) & wait_beam_enable;
-	wxy = wait_beam > sxy ? wait_beam : sxy;
+
+//	DebugPrintF("wait_beam %d,%d\n",(int) xwait_beam,(int) ywait_beam); 
+
+	if (ywait_beam != beam_y.b0)
+	{
+		dwy = ( ywait_beam > beam_y.b0 ) ? 
+			ywait_beam - beam_y.b0 : 
+			((int) ywait_beam + (int) 255 - (int) beam_y.b0 ) ;
+	}
+	else
+	{
+		dwy = 0;
+	}
+
+	sxy = (0 * beam_bpr + beam_x.low) ;	
+	wxy = (dwy * beam_bpr + xwait_beam);	
+
+//	DebugPrintF("sxy %08x wxy %08x\n",sxy,wxy); 
 
 	bInfo = bInfos;
 	final = wxy - sxy;
+
+	if (final<0)
+	{
+			if (to_draw_count)
+			{
+				do 
+				{
+					dest_data = plot4_fn( beam_source_data, dest_data );
+					beam_source_data += pixels_per_chunk;
+				} while (--to_draw_count);
+			}
+		return;
+	}
+
+//	DebugPrintF("render %d words\n",final); 
 
 	beam_remain = final;
 	do
 	{
 		if (beam_remain)	// one beam_remain is 4 clocks... we have time to draw all, before fetch...
 		{
+//			DebugPrintF("to_draw_count %d\n",to_draw_count); 
+
 			if (to_draw_count)
 			{
 				do 
@@ -521,12 +576,12 @@ void __render2()
 		if (bInfo -> fn)
 		{
 			bInfo -> fn(bInfo);
-			if (beam_x == beam_bpr)
+			if (beam_x.b32 == beam_bpr)
 			{
-				beam_x = 0;
+				beam_x.b32 = 0;
 
-				beam_y++;
-				draw_y = (beam_y-display_y)*display_scale_y;
+				beam_y.b32++;
+				draw_y = (beam_y.b32-display_y)*display_scale_y;
 
 
 //				DebugPrintF("bream_y: %d color0: %08x\n", beam_y, ecs2argb[0].argb);
@@ -537,17 +592,12 @@ void __render2()
 				}
 				else		// someting to display...
 				{
-					if (in_window_y(beam_y))
+					if (in_window_y(beam_y.b32))
 					{
-//						setPalette(0,0xFFFF00FF);
-
-
 						beam_displayed_in_window();
 					}
 					else
 					{
-//						setPalette(0,0xFF00FF00);
-
 						beam_displayed();
 //						beam_displayed_in_window();
 					}
@@ -557,6 +607,8 @@ void __render2()
 		}
 	}
 	while (beam_remain>0);
+
+//	DebugPrintF("render chunk done\n"); 
 }
 
 void render_copper(struct Custom *custom, uint32 *copperList, struct BitMap *bm )
@@ -579,12 +631,14 @@ void render_copper(struct Custom *custom, uint32 *copperList, struct BitMap *bm 
 	update_display_offsets();
 
 	beam_clock = 0;	// reset beam
-	beam_x = 0;
-	beam_y = 0;
+	beam_x.b32 = 0;
+	beam_y.b32 = 0;
 	beam_wordpos = 0;
 
-	wait_beam_enable = 0;
-	wait_beam = 0;
+	xwait_beam_enable = 0;
+	ywait_beam_enable = 0;
+	xwait_beam = 0;
+	ywait_beam = 0;
 
 	lock = LockBitMapTags( bm,
 		LBM_PixelFormat, &dest_format,
@@ -631,6 +685,8 @@ void render_copper(struct Custom *custom, uint32 *copperList, struct BitMap *bm 
 
 		UnlockBitMap(lock);
 	}
+
+//	DebugPrintF("exit at beam_y %d\n",beam_y.b32);
 }
 
 

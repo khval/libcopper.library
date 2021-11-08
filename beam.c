@@ -3,13 +3,13 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <proto/exec.h>
 
-extern uint32_t beam_x,beam_y;
 extern char *beam_source_data;
 
 #include "beam.h"
 
-uint32_t beam_remain = 0;
+int32_t beam_remain = 0;
 int beamParts;
 char beamInfo[beam_bpr];
 
@@ -34,33 +34,33 @@ extern int to_draw_count;
 
 void fn_skip (struct ffdpart *this)
 {
-	uint32_t startAt = beam_x - this -> wcStart;
+	uint32_t startAt = beam_x.b32 - this -> wcStart;
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
 	dprintf("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
 
 	to_draw_count = 0;
-	beam_x += move;
+	beam_x.b32 += move;
 	beam_remain -= move;
 }
 
 void fn_window (struct ffdpart *this)
 {
-	uint32_t startAt = beam_x - this -> wcStart;
+	uint32_t startAt = beam_x.b32 - this -> wcStart;
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
 	dprintf("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
 
 	to_draw_count = 0;	
-	beam_x += move;
+	beam_x.b32 += move;
 	beam_remain -= move;
 }
 
 void fn_ddf (struct ffdpart *this)
 {
-	uint32_t startAt = beam_x - this -> wcStart;
+	uint32_t startAt = beam_x.b32 - this -> wcStart;
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
@@ -69,13 +69,13 @@ void fn_ddf (struct ffdpart *this)
 	move_routine( move * 2 );	
 	to_draw_count = 0;	
 
-	beam_x += move;
+	beam_x.b32 += move;
 	beam_remain -= move;
 }
 
 void fn_window_ddf (struct ffdpart *this)
 {
-	uint32_t startAt = beam_x - this -> wcStart;
+	uint32_t startAt = beam_x.b32 - this -> wcStart;
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
@@ -84,7 +84,7 @@ void fn_window_ddf (struct ffdpart *this)
 	move_routine( move * 2 );		// not inside display ... no need to convert.
 	to_draw_count = 0;
 
-	beam_x += move;
+	beam_x.b32 += move;
 	beam_remain -= move;
 }
 
@@ -92,7 +92,7 @@ void fn_window_ddf (struct ffdpart *this)
 
 void fn_disp (struct ffdpart *this)
 {
-	uint32_t startAt = beam_x - this -> wcStart;
+	uint32_t startAt = beam_x.b32 - this -> wcStart;
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
@@ -101,13 +101,13 @@ void fn_disp (struct ffdpart *this)
 	plot4_fn = plot4_color0_fn;
 	to_draw_count = 4;			// 2 nibbles per byte, 2 bytes == 16bit.
 
-	beam_x += 1;
+	beam_x.b32 += 1;
 	beam_remain -= 1;
 }
 
 void fn_disp_window (struct ffdpart *this)
 {
-	uint32_t startAt = beam_x - this -> wcStart;
+	uint32_t startAt = beam_x.b32 - this -> wcStart;
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
@@ -116,13 +116,13 @@ void fn_disp_window (struct ffdpart *this)
 	plot4_fn = plot4_color0_fn;
 	to_draw_count = 4;			// 2 nibbles per byte, 2 bytes == 16bit.
 
-	beam_x += 1;
+	beam_x.b32 += 1;
 	beam_remain -= 1;
 }
 
 void fn_disp_ddf (struct ffdpart *this)
 {
-	uint32_t startAt = beam_x - this -> wcStart;
+	uint32_t startAt = beam_x.b32 - this -> wcStart;
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
@@ -132,13 +132,13 @@ void fn_disp_ddf (struct ffdpart *this)
 	plot4_fn = plot4_color0_fn;
 	to_draw_count = 4;
 
-	beam_x += 1;
+	beam_x.b32 += 1;
 	beam_remain -= 1;
 }
 
 void fn_disp_window_ddf (struct ffdpart *this)
 {
-	uint32_t startAt = beam_x - this -> wcStart;
+	uint32_t startAt = beam_x.b32 - this -> wcStart;
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
@@ -149,7 +149,7 @@ void fn_disp_window_ddf (struct ffdpart *this)
 	plot4_fn = plot4_bitmap_fn;
 	to_draw_count = 4;
 
-	beam_x += 1;
+	beam_x.b32 += 1;
 	beam_remain -= 1;
 }
 
@@ -331,7 +331,7 @@ void beam_displayed_in_window()
 
 void sync_beam()
 {
-	while (( beam_x <  bInfo -> wcStart  ) || ( beam_x >= bInfo -> wcEnd ))
+	while (( beam_x.b32 <  bInfo -> wcStart  ) || ( beam_x.b32 >= bInfo -> wcEnd ))
 	{
 		bInfo++;
 		if (bInfo >= bInfos + beamParts ) bInfo = bInfos;

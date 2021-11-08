@@ -24,9 +24,28 @@ extern void *fns[];
 extern struct ffdpart *bInfo;
 extern struct ffdpart bInfos[128];
 extern int beamParts;
-extern uint32_t beam_x;
-extern uint32_t beam_y;
-extern uint32_t beam_remain;
+
+union ubeam 
+{
+	uint32 b32;
+	struct
+	{
+		uint16 uw;
+		union
+		{
+			uint16 low;
+			struct 
+			{
+				uint8 b1;
+				uint8 b0;
+			};
+		};	
+	};
+};
+
+extern union ubeam beam_x;
+extern union ubeam beam_y;
+extern int32_t beam_remain;
 
 extern int decodeBeam();
 extern void sync_beam();
