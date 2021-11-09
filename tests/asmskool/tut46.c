@@ -36,6 +36,23 @@ struct Custom *custom = 0xDFF000;
 #define BLTDMOD 0x066
 #define BLTSIZE 0x058
 
+
+#define mini_dump(a,b)
+
+/*
+void mini_dump(uint16 *ptr,int cnt)
+{
+	printf("-- mini dump --\n");
+
+	while (cnt)
+	{
+		printf("%04x,%04x\n",*ptr++,*ptr++);
+		cnt--;
+	}
+}
+*/
+
+
 /*
 	SECTION TutDemo,CODE
 	JUMPPTR Start
@@ -609,16 +626,16 @@ void VBint()			//					;Blank template VERTB interrupt
 							//	lea CopSkyBplP,a1	;where to poke the bitplane pointer words.
 	a1 = (uint32) CopSkyBplP;
 							//	lea 14(a0),a0
-	a0 = ld_l(14+a0);
+	a0 = 14+a0;
 							//	move #3-1,d0
 	for(d0 = 3;d0;d0--)
 	{
 							//.bpll2:
 		d1 = a0;				//	move.l a0,d1
 							//	swap d1
-		st_w(2+a1,d1 >> 16);	//	move.w d1,2(a1)		;hi word
+		st_w(2+a1,D1.hw);		//	move.w d1,2(a1)		;hi word
 							//	swap d1
-		st_w(2+a1,d1 & 0xFFFF);	//	move.w d1,6(a1)		;lo word
+		st_w(6+a1,D1.lw);		//	move.w d1,6(a1)		;lo word
 
 		a1+=8;				//	addq #8,a1		;point to next bpl to poke in copper
 		a0 = SkyBpl+a0;		//	lea skybpl(a0),a0
@@ -876,9 +893,9 @@ void Init()											//Init:
 	for(d0=3;d0;d0--)								//	move #3-1,d0
 	{											//.bpll:
 		d1 = a0;									//	move.l a0,d1
-		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
+		d1 =  (D1.lw << 16) | D1.hw;					//	swap d1
 		st_w(a1+2,D1.lw);							//	move.w d1,2(a1)		;hi word
-		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
+		d1 =  (D1.lw << 16) | D1.hw;					//	swap d1
 		st_w(a1+6,D1.lw);							//	move.w d1,6(a1)		;lo word
 
 		a1 += 8;									//	addq #8,a1		;point to next bpl to poke in copper
@@ -894,11 +911,10 @@ void Init()											//Init:
 	for (d0=3;d0;d0--)								//	move #3-1,d0
 	{											//.bpll2:
 		d1 = a0;									//	move.l a0,d1
-		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
-		st_w(2+a1,d1);								//	move.w d1,2(a1)		;hi word
-		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
-		st_w(6+a1,d1);								//	move.w d1,6(a1)		;lo word
-
+		d1 =  (D1.lw << 16) | D1.hw;					//	swap d1
+//		st_w(2+a1,d1);								//	move.w d1,2(a1)		;hi word
+		d1 =  (D1.lw << 16) | D1.hw;					//	swap d1
+//		st_w(6+a1,d1);								//	move.w d1,6(a1)		;lo word
 		a1+=8;									//	addq #8,a1		;point to next bpl to poke in copper
 		a0 = SkyBpl + a0;							//	lea skybpl(a0),a0
 	}											//	dbf d0,.bpll2
@@ -911,30 +927,29 @@ void Init()											//Init:
 	a1 = (uint32) SprP;								//	lea SprP,a1
 	a0 = (uint32) StarSpr;							//	lea StarSpr,a0
 	d1 = a0;										//	move.l a0,d1
-	for (d0 = 2;d0;d0--);							//	moveq #2-1,d0
+	for (d0 = 2;d0;d0--);								//	moveq #2-1,d0
 	{											//.sprpl:	
-		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
+		d1 =  (D1.lw << 16) | D1.hw;					//	swap d1
 		st_w(a1+2,d1);								//	move.w d1,2(a1)
-		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
+		d1 =  (D1.lw << 16) | D1.hw;					//	swap d1
 		st_w(a1+6,d1);								//	move.w d1,6(a1)
 		a1 += 8;									//	addq.w #8,a1
 		d1+= (StarSpr2-StarSpr);						//	add.l #(StarSpr2-StarSpr),d1 
 	}											//	dbf d0,.sprpl	
 
-#endif
-
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 	a0 = (uint32) NullSpr;							//	lea NullSpr,a0
 	d1 = a0;										//	move.l a0,d1
 	for (d0 = 6 - 1;d0;d0--)							//	moveq #6-1,d0
 	{											//.sprpl2:
-		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
+		d1 =  (D1.lw << 16) | D1.hw;					//	swap d1
 		st_w(a1+2,d1);								//	move.w d1,2(a1)
-		d1 = (D1.hw >> 16) | (D1.lw << 16);			//	swap d1
+		d1 =  (D1.lw << 16) | D1.hw;					//	swap d1
 		st_w(a1+6,d1);								//	move.w d1,6(a1)
 		a1 += 8;									//	addq.w #8,a1
 	}											//	DBF d0,.sprpl2
+
+#endif
 
 	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
