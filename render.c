@@ -36,6 +36,9 @@ uint32 diwstart, diwstop, ddfstart, ddfstop;
 uint32 beam_clock = 0;
 uint16 beam_wordpos = 0;
 
+union ubeam  lbeam_x, lbeam_y;
+union ubeam beam_x,beam_y;
+
 union cop *ptr;
 
 char plane_data[16];
@@ -50,6 +53,8 @@ static int draw_x,draw_y;
 
 void setPalette(int index,uint32 argb)
 {
+//	DebugPrintF("set color %d to %08x at line %d\n", index,argb,beam_y.low);
+
 	palette2[index].argb1 = argb;
 	palette2[index].argb2 = argb;
 }
@@ -201,10 +206,7 @@ uint8 xwait_beam = 0x0000;
 uint8 ywait_beam_enable = 0xFF;
 uint8 xwait_beam_enable = 0x7F;
 
-
 static uint32 offset;
-union ubeam  lbeam_x, lbeam_y;
-union ubeam beam_x,beam_y;
 
 uint64 *dest_data = NULL;
 char *beam_source_data = NULL;
@@ -406,12 +408,24 @@ void cop_move(union cop data)
 		case COPJMP2: ptr = (union cop *) COP2LC -1;
 					break;
 
-		case COLOR00: setPalette(0,ecs2argb[data.d16.b].argb);	 break;
+		case COLOR00:	//	DebugPrintF("%04x,%04x\n",data.d16.a,data.d16.b);
+						 setPalette(0,ecs2argb[data.d16.b].argb);	 break;
 		case COLOR01: setPalette(1,ecs2argb[data.d16.b].argb);	 break;
 		case COLOR02: setPalette(2,ecs2argb[data.d16.b].argb);	 break;
 		case COLOR03: setPalette(3,ecs2argb[data.d16.b].argb);	 break;
 		case COLOR04: setPalette(4,ecs2argb[data.d16.b].argb);	 break;
 		case COLOR05: setPalette(5,ecs2argb[data.d16.b].argb);	 break;
+		case COLOR06: setPalette(6,ecs2argb[data.d16.b].argb);	 break;
+		case COLOR07: setPalette(7,ecs2argb[data.d16.b].argb);	 break;
+
+		case COLOR08: setPalette(8,ecs2argb[data.d16.b].argb);	 break;
+		case COLOR09: setPalette(9,ecs2argb[data.d16.b].argb);	 break;
+		case COLOR10: setPalette(10,ecs2argb[data.d16.b].argb);	 break;
+		case COLOR11: setPalette(11,ecs2argb[data.d16.b].argb);	 break;
+		case COLOR12: setPalette(12,ecs2argb[data.d16.b].argb);	 break;
+		case COLOR13: setPalette(13,ecs2argb[data.d16.b].argb);	 break;
+		case COLOR14: setPalette(14,ecs2argb[data.d16.b].argb);	 break;
+		case COLOR15: setPalette(15,ecs2argb[data.d16.b].argb);	 break;
 
 		case BPL1PTH:	setHigh16(bp0,data.d16.b);	bp0ptr = (unsigned char *) bp0;	break;
 		case BPL1PTL: 	setLow16(bp0,data.d16.b);	bp0ptr = (unsigned char *) bp0;	break;

@@ -65,6 +65,16 @@ typedef unsigned short uint16;
 #define COLOR03 0x186
 #define COLOR04 0x188
 #define COLOR05 0x18A
+#define COLOR06 0x18C
+#define COLOR07 0x18E
+#define COLOR08 0x190
+#define COLOR09 0x192
+#define COLOR10 0x194
+#define COLOR11 0x196
+#define COLOR12 0x198
+#define COLOR13 0x19A
+#define COLOR14 0x19C
+#define COLOR15 0x19E
 
 #define lowres_clock 4
 
