@@ -307,8 +307,11 @@ void Main()
 //********************  Effect 1 subroutine  ********************
 
 #define ld_b(a) *((uint8 *) (a))
+#define ld_sb(a) *((int8 *) (a))
 #define ld_w(a) *((uint16 *) (a))
+#define ld_sw(a) *((int16 *) (a))
 #define ld_l(a) *((uint32 *) (a))
+#define ld_sl(a) *((int32 *) (a))
 
 #define st_b(a,v) *((uint8 *) (a)) = (uint8) (v)
 #define st_w(a,v) *((uint16 *) (a)) = (uint16) (v)
@@ -532,7 +535,7 @@ void Part1()
 	a0 = (uint32) Sine;					//	lea Sine,a0
 	d6 = SineCtr;					//	move.w SineCtr,d6
 	d7 = 0x4d-6+37;				//	move.w #0x4d-6+37,d7
-	d7 += ld_w(a0 + d6);			//	add.w (a0,d6.w),d7
+	d7 += ld_sw(a0 + (d6*2));			//	add.w (a0,d6.w),d7
 
 	d6+=2;						//	addq.w #2,d6
 	if (d6>=SineEnd-Sine)			//	cmp.w #SineEnd-Sine,d6
@@ -2320,7 +2323,7 @@ void init_sin()
 	int i;
 	for (i = 0; i < (SineEnd - Sine) ; i++)
 	{
-		Sine[i] = sin( 2*M_PI * (double) i / (double) (SineEnd - Sine) ) * 127;
+		Sine[i] = sin( 2*M_PI * (double) i / (double) (SineEnd - Sine) ) * 45;
 	}
 }
 
