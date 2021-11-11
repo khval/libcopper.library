@@ -20,6 +20,8 @@ uint32 copperl1;
 uint32 copperl2;
 uint32 bp0, bp1, bp2, bp3, bp4, bp5, bp6, bp7;
 
+uint16 bpl1mod=0,bpl2mod=0;
+
 // start of --- render 2 ---
 
 int def_min_edge,def_max_edge;
@@ -444,6 +446,13 @@ void cop_move(union cop data)
 		case BPL8PTH: setHigh16(bp7,data.d16.b);	bp7ptr = (unsigned char *) bp7;	break;
 		case BPL8PTL: setLow16(bp7,data.d16.b);	bp7ptr = (unsigned char *) bp7;	break;
 
+		case BPL1MOD:
+					bpl1mod = data.d16.b;
+					break;
+
+		case BPL2MOD:
+					bpl2mod = data.d16.b;
+					break;
 
 		case BPLCON0:
 					// printf("BPLCON0\n");
@@ -475,6 +484,21 @@ void cop_move(union cop data)
 	}
 }
 
+
+void domod()
+{
+	switch( planes )
+	{
+		case 7:	bp7ptr+=bpl2mod;
+		case 6:	bp6ptr+=bpl1mod;
+		case 5:	bp5ptr+=bpl2mod;
+		case 4:	bp4ptr+=bpl1mod;
+		case 3:	bp3ptr+=bpl2mod;
+		case 2:	bp2ptr+=bpl1mod;
+		case 1:	bp1ptr+=bpl2mod;
+		case 0:	bp0ptr+=bpl1mod;
+	}
+}
 
 int ly = -1;
 int datafetch = 0;
@@ -593,10 +617,8 @@ void __render2()
 			if (beam_x.b32 == beam_bpr)
 			{
 				beam_x.b32 = 0;
-
 				beam_y.b32++;
 				draw_y = (beam_y.b32-display_y)*display_scale_y;
-
 
 //				DebugPrintF("bream_y: %d color0: %08x\n", beam_y, ecs2argb[0].argb);
 
@@ -608,6 +630,8 @@ void __render2()
 				{
 					if (in_window_y(beam_y.b32))
 					{
+						if (beam_y.b32 - dispwindow.y0 >0) domod();
+
 						beam_displayed_in_window();
 					}
 					else
