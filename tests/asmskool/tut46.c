@@ -2169,6 +2169,7 @@ ScrBplP= cop_ptr;
 
 bool load_raw_files()
 {
+	uint32 screenSize = bplsize*FontBpls;
 
 	if( ! load_raw("media/FastCarFont.284x100x3",0,(void **) &Font,(void **) &FontE)) return false;
 	if (! load_raw("media/Cloud.112x38x3.raw",0,(void **) &Cloud, (void **) &CloudE)) return false;
@@ -2178,7 +2179,19 @@ bool load_raw_files()
 	if( ! load_raw("media/Cloud.64x24x3.masks.raw", 0, (void **) &Cloud2Mask, (void **) &Cloud2MaskE)) return false;
 	if( ! load_raw("media/Cloud.48x15x3.masks.raw", 0, (void **) &Cloud3Mask, (void **) &Cloud3MaskE)) return false;
 //	if( ! load_raw("P61.new_ditty", 0, (void **) &Module1, (void **) &Module1E)) return false; // usecode 0xc00b43b
-	if( ! load_raw("sky3centered.raw", (logobwid*6), (void **) &Logo, (void **) &LogoE)) return false;
+
+	if( ! load_raw("sky3centered.raw", (logobwid*6) + screenSize, (void **) &Logo, (void **) &LogoE)) return false;
+
+	LogoE -= screenSize;
+
+	printf("Logo: %08x to %08x\n", Logo,LogoE);
+
+	Screen = LogoE;
+	ScreenE = Screen + screenSize;
+
+	printf("Screen: %08x to %08x\n", Screen,ScreenE);
+
+//	getchar();
 
 	return true;
 }
@@ -2204,9 +2217,6 @@ void uload_files()
 void bss_c()
 {
 	printf("size of screen: %d\n",bplsize*FontBpls);
-
-	Screen = malloc( bplsize*FontBpls);
-	ScreenE = Screen + (bplsize*FontBpls);
 
 	Sky = malloc( skybwid*(220+1));
 	SkyE = Sky + ( skybwid*(220+1) ); 
@@ -2285,8 +2295,10 @@ bool load_raw(const char *name, int extraSize, void **ptr, void **ptrE)
 		*ptr = malloc( size + extraSize );
 		if (*ptr)
 		{
+			memset( *ptr, 0, size + extraSize );
+
 			FRead( fd , *ptr, size ,1 );
-			*ptrE = *ptr + size;
+			*ptrE = *ptr + size + extraSize;
 			success = true;
 		}
 		FClose(fd);
