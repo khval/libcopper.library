@@ -15,6 +15,9 @@
 #include "common.h"
 #include "render.h"
 
+extern union reg_u *emu_stack_ptr;
+union reg_u emu_stack[10000];
+
 #ifdef __amigaos4__
 struct Custom _custom;
 struct Custom *custom = &_custom;	// store locally... handle things with do_functions();
@@ -2314,9 +2317,6 @@ bool load_raw(const char *name, int extraSize, void **ptr, void **ptrE)
 
 	return success;
 }
-
-extern union reg_u *emu_stack_ptr;
-union reg_u emu_stack[10000];
 
 void init_sin()
 {
