@@ -6,36 +6,48 @@ enum {
 
 union reg_u
 {
-	uint32 b32;
+	union
+	{
+		uint32 b32;
+		int32 s32;
+	};
 	struct {
 		union
 		{
-			uint16 hw;
+			union
+			{
+				uint16 hw;	// unsigned high word
+				int16 shw;	// signed high word
+			};
 			struct
 			{
-				uint8 b3;
+				uint8 b3;		// high byte
 				uint8 b2;
 			};
 		};
 		union
 		{
-			uint16 lw;
+			union
+			{
+				uint16 lw;		// unsigned low word
+				int16 slw;		// signed low word
+			};
 			struct
 			{
 				uint8 b1;
-				uint8 b0;
+				uint8 b0;		// low byte
 			};
 		};
 	};
 };
 
-static union reg_u D0,D1,D2,D3,D4,D5,D6,D7;
-static union reg_u A0,A1,A2,A3,A4,A5,A6,A7;
-
-static union reg_u *regArray[]={&D0,&D1,&D2,&D3,&D4,&D5,&D6,&D7,&A0,&A1,&A2,&A3,&A4,&A5,&A6,&A7};
+extern union reg_u D0,D1,D2,D3,D4,D5,D6,D7;
+extern union reg_u A0,A1,A2,A3,A4,A5,A6,A7;
+extern union reg_u *regArray[];
 
 void movem_push(uint32 reg_low, uint32 reg_hi);
 void movem_pop(uint32 reg_low, uint32 reg_hi);
+void dump_stack( union reg_u *stack );
 
 #define d0 D0.b32
 #define d1 D1.b32
