@@ -28,7 +28,7 @@ struct Custom *custom = 0xDFF000;
 #define BLTCON0 0x040
 #define BLTAFWM 0x044
 
-#define BLTAPTH 0x052
+#define BLTAPTH 0x050
 #define BLTBPTH 0x04C
 #define BLTCPTH 0x048
 #define BLTDPTH 0x054
