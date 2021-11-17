@@ -547,7 +547,7 @@ void Part1()
 
 		if (d0>=320+112)				//	cmp.w #320+112,d0
 		{							//	blt.b .nowrapx				// branch less then
-			d0=-d5;					//	sub.w d5,d0
+			d0-=d5;					//	sub.w d5,d0
 		} 							//.nowrapx:
 		st_w(a3-10,d0);				//	move.w d0,-10(a3)		;replace coord
 
