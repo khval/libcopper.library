@@ -859,7 +859,7 @@ void Scrollit()										//Scrollit:
 
 	//movem_push(RD0,RA6);						//;	movem.l d0-a6,-(sp)
 
-	a6 = custom;									//	lea 0xdff000,a6
+	a6 = (uint32) custom;							//	lea 0xdff000,a6
 	WAITBLIT();									//	WAITBLIT
 	st_l(a6+BLTCON0, 0x49f00002);					//	move.l #0x49f00002,BLTCON0(a6)
 	st_l(a6+BLTAFWM, 0xFFFFFFFF);					//	move.l #0xffffffff,BLTAFWM(a6)
@@ -870,35 +870,31 @@ void Scrollit()										//Scrollit:
 	st_w(a6+BLTSIZE, blth*3*64+bltw);					//	move.w #blth*3*64+bltw,BLTSIZE(a6)
 
 	doBlitter( custom );	// activate blitter...
+	_doBlitter( custom );	// activate blitter...
 
 	//movem_pop(RD0,RA6);							//;	movem.l (sp)+,d0-a6
 }												//	rts
 
 void Init()											//Init:
 {												//	movem.l d0-a6,-(sp)
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
 	movem_push(RD0,RA6);
 
 	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 	d1=0;										//	moveq #0,d1
 	a1 = (uint32) Screen;							//	lea Screen,a1
-	d0 = bplsize*FontBpls/2;						//	move.w #bplsize*FontBpls/2-1,d0
+	d0 = bplsize*FontBpls/2;							//	move.w #bplsize*FontBpls/2-1,d0
 	for (;d0;d0--)									//.l:	
 	{
 		st_w(a1,0);	a1+=2;						//	move.w #0,(a1)+
 		D1.lw += 1;								//	addq.w #1,d1
 	}											//	dbf d0,.l
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
 												//	lea Sky,a1
 												//	lea Sky2,a2		;clear 2nd buffer also
 												//	lea SkyBufferL(PC),a3
 	SkyBufferL[0] = (uint32) Sky;						//	move.l a1,(a3)+
 	SkyBufferL[1] = (uint32) Sky2;						//	move.l a2,(a3)+		;Double-buffer list initialized
-
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 	a1 = (uint32) Sky;								//	lea Sky,a1
 	a2 = (uint32) Sky2;								//	lea Sky2,a2		;clear 2nd buffer also
@@ -913,8 +909,6 @@ void Init()											//Init:
 		st_l(a2,d0); a2+=4;							//	move.l d0,(a2)+
 		st_l(a2,d0); a2+=4;							//	move.l d0,(a2)+
 	}											//	dbf d7,.l7
-
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 //    *--- playfield 1 ptrs ---*
 
@@ -932,8 +926,6 @@ void Init()											//Init:
 		a0 += logobpl;								//	lea logobpl(a0),a0
 	}											//	dbf d0,.bpll
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
 //    *--- playfield 2 ptrs ---*
 
 	a0 = (uint32) Sky +14;							//	lea Sky+14,a0		;ptr to first bitplane of logo
@@ -942,9 +934,9 @@ void Init()											//Init:
 	{											//.bpll2:
 		d1 = a0;									//	move.l a0,d1
 		d1 =  (D1.lw << 16) | D1.hw;					//	swap d1
-//		st_w(2+a1,d1);								//	move.w d1,2(a1)		;hi word
+		st_w(2+a1,d1);								//	move.w d1,2(a1)		;hi word
 		d1 =  (D1.lw << 16) | D1.hw;					//	swap d1
-//		st_w(6+a1,d1);								//	move.w d1,6(a1)		;lo word
+		st_w(6+a1,d1);								//	move.w d1,6(a1)		;lo word
 		a1+=8;									//	addq #8,a1		;point to next bpl to poke in copper
 		a0 = SkyBpl + a0;							//	lea skybpl(a0),a0
 	}											//	dbf d0,.bpll2
