@@ -770,7 +770,7 @@ void PlotChar()										//PlotChar:	;a0=scrollptr
 
 	st_w(a6+BLTSIZE, 20*3*64+2);					//	move.w #20*3*64+2,BLTSIZE(a6)
 
-	doBlitter( custom );
+	_doBlitter( custom );
 
 	movem_pop(RD0,RA6);							//;	movem.l (sp)+,d0-a6
 }												//	rts
@@ -793,32 +793,32 @@ void PlotBob()										//PlotBob:		;d0-d3/a0-a2=x,y,width,h,src,dest,mask,BLTCO
 	D2.lw >>=4;									//	lsr.w #4,d2			;word width
 
 	D5.lw = D0.lw;									//	move.w d0,d5			;x position
-	d5 >>= 4;									//	asr.w #4,d5			;in words
+	D5.lw >>= 4;									//	asr.w #4,d5			;in words
 	D5.lw += D5.lw;								//	add.w d5,d5			;*2=byte offset into destination
+
+	// interlived data... skip planes...
 
 	d1 *= skybwid;									//	muls #skybwid,d1		;y offset
 												//	ext.l d5
 
 	d5 = D5.lw | ((D5.lw & 0x8000) ? 0xFFFF0000 : 0x00000000);
 
-	d1+=d5;										//	add.l d5,d1
-	a1+=d1;										//	add.l d1,a1			;dest address
+	D1.s32+= D5.s32;								//	add.l d5,d1
+	A1.b32+= D1.s32;								//	add.l d1,a1			;dest address
 
-	d0 &= 0xf;									//	and.w #0xf,d0			;shift nibble
-	d0 = ((d0 & 0xF) << 12) |  (d0 >> 4) ;				//	ror.w #4,d0			;to top nibble
-
+	D0.lw &= 0xf;									//	and.w #0xf,d0			;shift nibble
+	D0.lw = ((D0.lw & 0xF) << 12) |  (D0.lw >> 4) ;		//	ror.w #4,d0			;to top nibble
 	d5 = d0;										//	move.w d0,d5			;and put in
-	d5 = (D5.hw >> 16) | (D5.lw << 16);				//	swap d5				;both words
-
+	d5 = (D5.lw << 16) | D5.hw;						//	swap d5				;both words
 	D5.lw = D0.lw;									//	move.w d0,d5			;of BLTCON
-	
-	d5 = d5 | d4;									//	or.l d4,d5
-	
-	d3 *= 64*3;									//	mulu #3*64,d3			;calculate blit size
-	D3.lw += D2.lw;								//	add.w d2,d3
+	d5 |=  d4;										//	or.l d4,d5
 
-	D2.lw += D2.lw;								//	add.w d2,d2			;w/8
-	D2.lw = -D2.lw;									//	neg.w d2
+	d3 *= 64*3;									//	mulu #3*64,d3			;calculate blit size
+
+	D3.slw += D2.slw;								//	add.w d2,d3
+
+	D2.slw += D2.slw;								//	add.w d2,d2			;w/8
+	D2.slw = -D2.slw;								//	neg.w d2
 	D2.lw += SkyBpl;								//	add.w #SkyBpl,d2		;=SkyBpl-w/8
 
 	WAITBLIT();									//	WAITBLIT
@@ -829,13 +829,14 @@ void PlotBob()										//PlotBob:		;d0-d3/a0-a2=x,y,width,h,src,dest,mask,BLTCO
 	st_l(a6+BLTBPTH, a0);							//	move.l a0,BLTBPTH(a6)
 	st_l(a6+BLTCPTH, a1);							//	move.l a1,BLTCPTH(a6)
 	st_l(a6+BLTDPTH, a1);							//	move.l a1,BLTDPTH(a6)
+	st_l(a6+BLTAMOD,0);
 	st_l(a6+BLTBMOD,0);							//	clr.l BLTBMOD(a6)
 	st_w(a6+BLTCMOD, d2);							//	move.w d2,BLTCMOD(a6)
 	st_w(a6+BLTDMOD, d2);							//	move.w d2,BLTDMOD(a6)
 	st_w(a6+BLTSIZE, d3);							//	move.w d3,BLTSIZE(a6)
 
-	doBlitter( custom );	// activate blitter...
-					
+	_doBlitter( custom );	// activate blitter...
+			
 	movem_pop(RA1,RA1);							//	movem.l (sp)+,d0-d3/d5/a1
 	movem_pop(RD5,RD5);
 	movem_pop(RD0,RD3);
