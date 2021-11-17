@@ -629,7 +629,7 @@ void VBint()			//					;Blank template VERTB interrupt
 	// --- will call this on every.
 
 	movem_push(RD0,RA6);		//	movem.l d0-a6,-(sp)		;Save used registers
-	a6 = (uint32) custom;				//	lea 0xdff000,a6
+	a6 = (uint32) custom;		//	lea 0xdff000,a6
 							//	btst #5,0x1f(a6)			;INTREQR check if it's our vertb int.
 							//	beq.s .notvb
 
@@ -702,9 +702,9 @@ void VBint()			//					;Blank template VERTB interrupt
 
 void PlotChar()										//PlotChar:	;a0=scrollptr
 {												//;	movem.l d0-a6,-(sp)
-	a0 = (uint32) ScrollPtr;									//	move.l ScrollPtr(PC),a0
+	a0 = (uint32) ScrollPtr;							//	move.l ScrollPtr(PC),a0
 
-	a6 = custom;									//	lea 0xdff000,a6
+	a6 = (uint32) custom;							//	lea 0xdff000,a6
 
 												//	moveq #0,d0
 	d0 = ld_b(a0); a0++;							//	move.b (a0)+,d0			;ASCII value
@@ -788,7 +788,6 @@ void PlotBob()										//PlotBob:		;d0-d3/a0-a2=x,y,width,h,src,dest,mask,BLTCO
 	movem_push(RD0,RD3);
 	movem_push(RD5,RD5);
 	movem_push(RA1,RA1);
-
 
 	D2.lw+=15;									//	add.w #15,d2			;round up
 	D2.lw >>=4;									//	lsr.w #4,d2			;word width
@@ -949,8 +948,6 @@ void Init()											//Init:
 		a0 = SkyBpl + a0;							//	lea skybpl(a0),a0
 	}											//	dbf d0,.bpll2
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
 
 #ifdef have_sprite
 
@@ -981,11 +978,6 @@ void Init()											//Init:
 
 #endif
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
-	printf("FontE: %08x\n",FontE);
-	printf("FontPalP: %08x\n",FontPalP);
-
 	a0 =	((uint32) FontE)-7*2;							//	lea FontE-7*2,a0
 	a1 =	((uint32) FontPalP)+2;						//	lea FontPalP+2,a1
 
@@ -995,7 +987,6 @@ void Init()											//Init:
 		a1+=2;									//	addq.w #2,a1
 	}											//	DBF d0,.coll
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 //    *--- initialize sprites ---*
 
@@ -1230,8 +1221,6 @@ void Init()											//Init:
 
 #endif
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
 	movem_pop(RD0,RA6);							//	movem.l (sp)+,d0-a6
 }												//	rts
 
@@ -1459,8 +1448,8 @@ extern struct cloud CloudCoordsL2[];
 
 struct cloud *CloudCoordsLP[]=			//CloudCoordsLP:
 	{
-		CloudCoordsL,			//	dc.l CloudCoordsL
-		CloudCoordsL2			//	dc.l CloudCoordsL2
+		CloudCoordsL,					//	dc.l CloudCoordsL
+		CloudCoordsL2					//	dc.l CloudCoordsL2
 	};
 
 
