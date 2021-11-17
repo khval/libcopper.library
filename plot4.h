@@ -7,6 +7,12 @@ extern uint64 *plot4_color0_scale2( char *source_data, uint64 *dest_data );
 extern uint64 *plot4_scale1( char *source_data, uint32 *dest_data );
 extern uint64 *plot4_scale2( char *source_data , uint64 *dest_data );
 
+extern uint64 *plot4_playfield_scale1( char *source_data, uint32 *dest_data );
+extern uint64 *plot4_playfield_scale2( char *source_data , uint64 *dest_data );
+
+void init_dual_playfield_index( int plains );
+void init_dual_playfield_index2();
+
 extern unsigned char *dest_ptr_image;
 extern unsigned int dest_bpr;
 

@@ -167,7 +167,7 @@ void init_ecs2colors()
 #define setHigh16(name,value) name = (name & 0xFFFF) | ( (value)<<16);
 #define setLow16(name,value) name = ( name & 0xFFFF0000) | (value);
 
-uint16 hires,planes,ham,lace;
+uint16 hires,planes,ham,lace,playfield;
 
 extern void move_none();
 
@@ -225,18 +225,6 @@ void update_display_offsets()
 		num_chunks = 2;
 		clock_speed = 2;
 		gfx_shift = 0;
-
-		switch (display_scale_x)
-		{
-			case 1:
-					plot4_color0_fn = plot4_color0_scale1; 
-					plot4_bitmap_fn = (CAST_PLOT4) plot4_scale1; 
-					break;
-			case 2:
-					plot4_color0_fn = plot4_color0_scale2;
-					plot4_bitmap_fn = plot4_scale2; 
-					break;
-		}
 	}
 	else
 	{
@@ -247,17 +235,19 @@ void update_display_offsets()
 		clock_speed = 1;
 		gfx_shift = 1;
 
-		switch (display_scale_x)
-		{
-			case 1:
-					plot4_color0_fn = plot4_color0_scale1; 
-					plot4_bitmap_fn = (CAST_PLOT4) plot4_scale1; 
-					break;
-			case 2:
-					plot4_color0_fn = plot4_color0_scale2;
-					plot4_bitmap_fn = plot4_scale2; 
-					break;
-		}
+	}
+
+
+	switch (display_scale_x)
+	{
+		case 1:
+				plot4_color0_fn = plot4_color0_scale1; 
+				plot4_bitmap_fn = (CAST_PLOT4) (playfield ? plot4_playfield_scale1 : plot4_scale1 ); 
+				break;
+		case 2:
+				plot4_color0_fn = plot4_color0_scale2;
+				plot4_bitmap_fn = (CAST_PLOT4) (playfield ? plot4_playfield_scale2 : plot4_scale2 ); 
+				break;
 	}
 
 	// ddf_mix is clocks... from edge.
@@ -457,12 +447,22 @@ void cop_move(union cop data)
 		case BPLCON0:
 					// printf("BPLCON0\n");
 
-					hires = data.d16.b & 0x8000;
-					planes = (data.d16.b & 0x7000) >> 12;
-					ham = data.d16.b & (1<<11);
-					lace = data.d16.b & (1<<2);
+					//              8 4 2 1
+					// 7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0
+					//            * *                            *
 
-					// printf( "planes %d\n", planes );
+
+					hires		= data.d16.b & 0x8000;
+					planes	= (data.d16.b & 0x7000) >> 12;
+					ham 		= data.d16.b & 0x0800;			// bit 11
+					playfield	= data.d16.b & 0x0400;			// bit 10
+					lace		= data.d16.b & 0x0040;			// bit 2
+
+					if (playfield)
+					{
+						init_dual_playfield_index( planes );
+						init_dual_playfield_index2();
+					}
 
 					update_routines( planes );
 					update_display_offsets();
