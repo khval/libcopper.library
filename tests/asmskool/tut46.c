@@ -344,28 +344,47 @@ void Part1()
 
  //   *--- clear clouds ---*
 
+
+//******* Added some stuff here to clear sky, workaround for bug in blitzen  *******	
+
+	a3= (uint32) *SkyBufferL;				// move.l SkyBufferL(PC),a1
+
+	d7 = (SkyE-Sky) / 4;
+	for (;d7>0;d7--)
+	{
+		st_l(a3,0x00000000);
+		a3+=4;
+	}
+
+//*******************************************************************************
+
+// Code below does not work with blitzen, does not support blitcon0 = 0x01000000
+
+/********************************************************************************/
+#if 0
 	a1= (uint32) SkyBufferL;				// move.l SkyBufferL(PC),a1
 	a3 = (uint32) CloudCoordsLP[0]; 		// move.l CloudCoordsLP(PC),a3
 
-	d7 =	cloudcount-1;				// moveq #cloudcount-1,d7
+	for (d7 = cloudcount;d7;d7--)			// moveq #cloudcount-1,d7
+	{								// .clearl:
+		a0 = ld_l(a3); a3+=4;			//	move.l (a3)+,a0			;bob
+		a2 = ld_l(a3); a3+=4;			//	move.l (a3)+,a2			;mask
 
-// .clearl:
-
-	for (;d7;d7--)
-	{
-		a0 = ld_l(a3); a3+=4;		//	move.l (a3)+,a0			;bob
-		a2 = ld_l(a3); a3+=4;		//	move.l (a3)+,a2			;mask
-
-		d0 = ld_w(a3); a3+=2;		//	move.w (a3)+,d0			;x coord
-		d1 = ld_w(a3); a3+=2;		//	move.w (a3)+,d1			;y coord
-		d2 = ld_w(a3); a3+=2;		//	move.w (a3)+,d2			;width
-		d3 = ld_w(a3); a3+=2;		//	move.w (a3)+,d3			;height
+		d0 = ld_w(a3); a3+=2;			//	move.w (a3)+,d0			;x coord
+		d1 = ld_w(a3); a3+=2;			//	move.w (a3)+,d1			;y coord
+		d2 = ld_w(a3); a3+=2;			//	move.w (a3)+,d2			;width
+		d3 = ld_w(a3); a3+=2;			//	move.w (a3)+,d3			;height
 		
-		a3+=2;					//	addq.w #2,a3			;skip speed value.
-		d4 = 0x01000000;			//	move.l #0x01000000,d4		;clear blit
+		a3+=2;						//	addq.w #2,a3			;skip speed value.
+		d4 = 0x01000000;				//	move.l #0x01000000,d4		;clear blit
+
+		printf("Clear PlotBob x: %d, y: %d\n",d0,d1);
 
 		PlotBob();
-	}							//	dbf d7,.clearl
+	}								//	dbf d7,.clearl
+
+#endif
+/*********************************************************************************/
 
 // @bouncescroller was here
 
