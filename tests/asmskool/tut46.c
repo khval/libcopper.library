@@ -15,6 +15,8 @@
 #include "common.h"
 #include "render.h"
 
+#include "blitzen.c"
+
 extern union reg_u *emu_stack_ptr;
 union reg_u emu_stack[10000];
 
@@ -26,7 +28,9 @@ struct Custom *custom = 0xDFF000;
 #endif
 
 #define BLTCON0 0x040
+#define BLTCON1 0x042
 #define BLTAFWM 0x044
+#define BLTALWM 0x046
 
 #define BLTAPTH 0x050
 #define BLTBPTH 0x04C
@@ -39,8 +43,9 @@ struct Custom *custom = 0xDFF000;
 #define BLTDMOD 0x066
 #define BLTSIZE 0x058
 
-
 #define mini_dump(a,b)
+
+void _doBlitter( struct Custom *custom );
 
 /*
 void mini_dump(uint16 *ptr,int cnt)
