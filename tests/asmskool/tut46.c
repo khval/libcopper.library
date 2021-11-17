@@ -2435,10 +2435,189 @@ void WaitMouse()
 		} while (running);
 	}
 
-	dump_copper( (uint32 *) Copper );
+//	dump_copper( (uint32 *) Copper );
 }
 
 void WAITBLIT()
 {
 }
+
+struct valid_range
+{
+	uint8 *s;
+	uint8 *e;
+};
+
+
+
+bool validAddress(uint8 *ptr)
+{
+	struct valid_range *vrange;
+
+	struct valid_range valid_ranges[]=
+		{
+			{Screen,ScreenE},
+			{Sky,SkyE},
+			{Sky2,Sky2E},
+			{NULL,NULL}
+		};
+
+	for (vrange=valid_ranges;vrange->s;vrange++)
+	{
+		if ((ptr>=vrange -> s) && (ptr < vrange -> e))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+
+#if 1
+
+extern struct blitstate *bstate;
+
+void _doBlitter( struct Custom *custom )
+{
+	uint16 *dptr = (uint16 *) custom -> bltdpt;
+
+	if (validAddress( (uint8 *) dptr) == false)
+	{
+		printf("not a valied address\n");
+		return;
+	}
+
+	CustomToBlitsate( custom,  bstate );
+	blitzenBlit(  bstate );
+}
+
+#endif
+
+
+#if 0
+
+char *_b[]=
+{
+	"0000 0000",
+	"0000 0001",
+	"0000 0010",
+	"0000 0011",
+
+	"0000 0100",
+	"0000 0101",
+	"0000 0110",
+	"0000 0111",
+
+	"0000 1000",
+	"0000 1001",
+	"0000 1010",
+	"0000 1011",
+
+	"0000 1100",
+	"0000 1101",
+	"0000 1110",
+	"0000 1111",
+};
+
+void _doBlitter( struct Custom *custom )	// activate blitter...
+{
+	uint16 ash_last;
+	uint16 ash_next;
+	uint16 ash;
+	uint16 ash_mask;
+	uint16 bsh_last;
+	uint16 bsh_next;
+	uint16 bsh;
+	uint16 bsh_mask;
+	uint16 used;
+	uint16 func;
+
+	uint32 x,y;
+	uint32 w,h;
+
+	uint16 *arow;
+	uint16 *drow;
+
+	uint16 *aptr = (uint16 *) custom -> bltapt;
+	uint16 *bptr = (uint16 *) custom -> bltbpt;
+	uint16 *cptr = (uint16 *) custom -> bltcpt;
+	uint16 *dptr = (uint16 *) custom -> bltdpt;
+
+	if (validAddress(dptr) == false)
+	{
+		printf("not a valied address\n");
+		return;
+	}
+	
+	h = custom -> bltsize >> 6;
+	w = custom -> bltsize & 0x3F;
+
+	ash = custom -> bltcon0 & 0xF000 >> (3*4);
+	used = custom -> bltcon0 & 0x0F00 >> (2*4);
+	func = custom -> bltcon0 & 0xFF;
+
+	bsh = custom -> bltcon1 & 0xF000 >> (3*4);	
+
+	ash_mask = ash ? (1 << ash) -1 : 0;
+	bsh_mask = bsh ? (1 << bsh) -1 : 0;
+
+	printf("used: %s\n",_b[used]);
+	printf("ash %d, bsh %d\n",ash,bsh);
+	printf("ash_mask %08x, bsh_mask %08x\n",ash_mask,bsh_mask);
+	printf("func: %08x\n",func);
+
+
+	if (used == 0) getchar();
+
+//	printf("bltcon0 %04x\n", custom -> bltcon0);
+//	printf("bltcon1 %04x\n", custom -> bltcon1);
+
+/*
+	printf("bltafwm %08x -- %08x\n", 
+			custom -> bltafwm, offsetof(struct Custom,bltafwm));
+
+	printf("bltalwm %08x -- %08x\n", 
+			custom -> bltalwm, offsetof(struct Custom,bltalwm));
+*/
+
+	printf("w %d, h %d\n", w,h );
+
+	printf("bltamod %d\n", custom -> bltamod);
+	printf("bltbmod %d\n", custom -> bltbmod);
+	printf("bltcmod %d\n", custom -> bltcmod);
+	printf("bltdmod %d\n", custom -> bltdmod);
+
+
+	for (y=0;y<h;y++)
+	{
+		ash_last = 0;
+		bsh_last = 0;
+
+		for (x=0;x<w;x++)
+		{
+			ash_next = *aptr & ash_mask << (16 - ash);
+			*dptr = *cptr | (ash_last | (*aptr >> ash)) ;
+			ash_last = ash_next;
+			aptr++; bptr++; cptr++; dptr++;
+		}
+
+		aptr += custom -> bltamod/2;
+		bptr += custom -> bltbmod/2;
+		cptr += custom -> bltcmod/2;
+		dptr += custom -> bltdmod/2;
+	}
+
+/*
+	st_l(a6+BLTCON0, 0x49f00002);					//	move.l #0x49f00002,BLTCON0(a6)
+	st_l(a6+BLTAFWM, 0xFFFFFFFF);					//	move.l #0xffffffff,BLTAFWM(a6)
+	st_l(a6+BLTAPTH, Screen+bltoffs+brcorner);			//	move.l #Screen+bltoffs+brcorner,BLTAPTH(a6)
+	st_l(a6+BLTDPTH, Screen+bltoffs+brcorner);			//	move.l #Screen+bltoffs+brcorner,BLTDPTH(a6)
+	st_w(a6+BLTAMOD, bltskip);						//	move.w #bltskip,BLTAMOD(a6)
+	st_w(a6+BLTDMOD, bltskip);						//	move.w #bltskip,BLTDMOD(a6)
+	st_w(a6+BLTSIZE, blth*3*64+bltw);					//	move.w #blth*3*64+bltw,BLTSIZE(a6)
+*/
+}
+	
+#endif
 
