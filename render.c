@@ -346,7 +346,7 @@ void cop_wait(union cop data)
 	{
 		// x is 7bit, bit 0 used for somethng else..
 		ywait_beam = (data.d16.a >> 8 ) & ywait_beam_enable;
-		xwait_beam = (data.d16.a >> 7) & xwait_beam_enable;
+		xwait_beam = (data.d16.a >> 1) & xwait_beam_enable;
 	}
 	else
 	{
