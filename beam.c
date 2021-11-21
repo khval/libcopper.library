@@ -329,7 +329,7 @@ int decodeBeam()
 			bInfo -> wc = wc;
 			bInfo -> wcEnd = x;
 			bInfo -> flags = lf;
-			bInfo -> fn = fns_tabels[ 0 ][ lf ];
+			bInfo -> fn = fns_tabels[ beam_displyed ][ lf ];
 			bInfo++;
 			bInfo -> wcStart = x;
 			wc = 1;
@@ -340,7 +340,7 @@ int decodeBeam()
 	bInfo -> wc = wc;
 	bInfo -> wcEnd = x;
 	bInfo -> flags = lf;
-	bInfo -> fn = fns_tabels[ 0 ][ lf ];
+	bInfo -> fn = fns_tabels[ beam_displyed ][ lf ];
 
 	return bInfo - bInfos +1;
 }
