@@ -32,17 +32,62 @@ extern int to_draw_count;
 
 // *** not displayed ***
 
+struct render_stats
+{
+	int fn_skip;
+	int fn_window;
+	int fn_ddf;
+	int fn_window_ddf;
+	int fn_disp;
+	int fn_disp_window;
+	int fn_disp_ddf;
+	int fn_disp_window_ddf;
+};
+
+struct render_stats render_stats ;
+
+void clear_remder_stats()
+{
+	render_stats.fn_skip = 0;
+	render_stats.fn_window = 0;
+	render_stats.fn_ddf = 0;
+	render_stats.fn_window_ddf = 0;
+	render_stats.fn_disp = 0;
+	render_stats.fn_disp_window = 0;
+	render_stats.fn_disp_ddf = 0;
+	render_stats.fn_disp_window_ddf = 0;
+}
+
+void dump_render_stats(int line)
+{
+	DebugPrintF("\nStat at line %d:\n",line);
+	DebugPrintF("  fn_skip %d\n",render_stats.fn_skip);
+	DebugPrintF("  fn_window %d\n",render_stats.fn_window);
+	DebugPrintF("  fn_ddf %d\n",render_stats.fn_ddf);
+	DebugPrintF("  fn_window_ddf %d\n",render_stats.fn_window_ddf);
+	DebugPrintF("  fn_disp %d\n",render_stats.fn_disp);
+	DebugPrintF("  fn_disp_window %d\n",render_stats.fn_disp_window);
+	DebugPrintF("  fn_disp_ddf %d\n",render_stats.fn_disp_ddf);
+	DebugPrintF("  fn_disp_window_ddf %d\n",render_stats.fn_disp_window_ddf);
+
+	clear_remder_stats();
+}
+
+extern uint32 copper_debug_on;
+
 void fn_skip (struct ffdpart *this)
 {
 	uint32_t startAt = beam_x.b32 - this -> wcStart;
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
-	dprintf("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
+//	if (copper_debug_on) DebugPrintF("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
 
 	to_draw_count = 0;
 	beam_x.b32 += move;
 	beam_remain -= move;
+
+//	render_stats.fn_skip++;
 }
 
 void fn_window (struct ffdpart *this)
@@ -51,11 +96,13 @@ void fn_window (struct ffdpart *this)
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
-	dprintf("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
+//	if (copper_debug_on) DebugPrintF("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
 
 	to_draw_count = 0;	
 	beam_x.b32 += move;
 	beam_remain -= move;
+
+//	render_stats.fn_window ++;
 }
 
 void fn_ddf (struct ffdpart *this)
@@ -64,13 +111,15 @@ void fn_ddf (struct ffdpart *this)
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
-	dprintf("%-5d - %s: bp0ptr: %08x, moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
+//	if (copper_debug_on) DebugPrintF("%-5d - %s: bp0ptr: %08x, moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
 
 	move_routine( move * 2 );	
 	to_draw_count = 0;	
 
 	beam_x.b32 += move;
 	beam_remain -= move;
+
+//	render_stats.fn_ddf ++;
 }
 
 void fn_window_ddf (struct ffdpart *this)
@@ -79,13 +128,15 @@ void fn_window_ddf (struct ffdpart *this)
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
-	dprintf("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
+//	if (copper_debug_on) DebugPrintF("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
 
 	move_routine( move * 2 );		// not inside display ... no need to convert.
 	to_draw_count = 0;
 
 	beam_x.b32 += move;
 	beam_remain -= move;
+
+//	render_stats.fn_window_ddf = 0;
 }
 
 // ****** display *******
@@ -96,13 +147,15 @@ void fn_disp (struct ffdpart *this)
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
-	dprintf("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
+//	if (copper_debug_on) DebugPrintF("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
 
 	plot4_fn = plot4_color0_fn;
 	to_draw_count = 4;			// 2 nibbles per byte, 2 bytes == 16bit.
 
 	beam_x.b32 += 1;
 	beam_remain -= 1;
+
+//	render_stats.fn_disp++;
 }
 
 void fn_disp_window (struct ffdpart *this)
@@ -111,13 +164,15 @@ void fn_disp_window (struct ffdpart *this)
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
-	dprintf("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
+//	if (copper_debug_on) DebugPrintF("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
 
 	plot4_fn = plot4_color0_fn;
 	to_draw_count = 4;			// 2 nibbles per byte, 2 bytes == 16bit.
 
 	beam_x.b32 += 1;
 	beam_remain -= 1;
+
+//	render_stats.fn_disp_window++;
 }
 
 void fn_disp_ddf (struct ffdpart *this)
@@ -126,7 +181,7 @@ void fn_disp_ddf (struct ffdpart *this)
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
-	dprintf("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
+//	if (copper_debug_on) DebugPrintF("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
 
 	move_routine( 1 * 2 );	// not inside window ... no need to convert.
 	plot4_fn = plot4_color0_fn;
@@ -134,6 +189,8 @@ void fn_disp_ddf (struct ffdpart *this)
 
 	beam_x.b32 += 1;
 	beam_remain -= 1;
+
+//	render_stats.fn_disp_ddf++;
 }
 
 void fn_disp_window_ddf (struct ffdpart *this)
@@ -142,7 +199,7 @@ void fn_disp_window_ddf (struct ffdpart *this)
 	uint32_t move = this -> wc - startAt;
 	if (beam_remain<move) move = beam_remain;
 
-	dprintf("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
+//	if (copper_debug_on) DebugPrintF("%-5d - %s: bp0ptr: %08x - moves left %d\n",beam_x,__FUNCTION__,bp0ptr, move);
 
 	convert16( plane_data );
 	beam_source_data = plane_data;
@@ -151,6 +208,8 @@ void fn_disp_window_ddf (struct ffdpart *this)
 
 	beam_x.b32 += 1;
 	beam_remain -= 1;
+
+//	render_stats.fn_disp_window_ddf++;
 }
 
 // ******* table *******
@@ -348,7 +407,7 @@ void setBeamFlag(int x0,int x1, uint32_t flag )
 {
 	int x;
 
-	dprintf("%s(%d,%d,%08x)\n",__FUNCTION__,x0,x1,flag);
+//	dprintf("%s(%d,%d,%08x)\n",__FUNCTION__,x0,x1,flag);
 
 	for (x = x0; x<x1;x++) beamInfo[x] |= flag;
 }

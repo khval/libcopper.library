@@ -22,6 +22,8 @@ uint32 bp0, bp1, bp2, bp3, bp4, bp5, bp6, bp7;
 
 uint16 bpl1mod=0,bpl2mod=0;
 
+uint32 copper_debug_on = 0;
+
 // start of --- render 2 ---
 
 int def_min_edge,def_max_edge;
@@ -59,6 +61,18 @@ void setPalette(int index,uint32 argb)
 
 	palette2[index].argb1 = argb;
 	palette2[index].argb2 = argb;
+}
+
+void CopDumpPal( int line )
+{
+	int index;
+
+	DebugPrintF("Colors at beam y %d, line/code: %d\n",beam_y.low, line);
+
+	for (index=0;index<16;index++)
+	{
+		DebugPrintF("Color %d: %04x\n",index, palette2[index].argb1);
+	}
 }
 
 #define DISPLAY_LEFT_SHIFT 0x40	
@@ -481,6 +495,32 @@ void cop_move(union cop data)
 		case COP1LCL: setLow16(COP1LC,data.d16.b); break;
 		case COP2LCH: setHigh16(COP2LC,data.d16.b); break;
 		case COP2LCL: setLow16(COP2LC,data.d16.b); break;
+
+		case COPSTAT:
+					dump_render_stats(data.d16.b);
+					break;
+
+		case COPPAL:
+					CopDumpPal(data.d16.b);
+					break;
+
+		case COPDEBUGON:
+					DebugPrintF("COPPER DEBUG ON at %d\n",data.d16.b); 
+					copper_debug_on = 1;					
+					break;
+
+		case COPDEBUGOFF:
+					DebugPrintF("COPPER DEBUG OFF at %d\n",data.d16.b); 
+					copper_debug_on = 0;
+					break;
+
+		case COPDEBUG:
+
+					DebugPrintF("\ncopper debug at line/code: %d\n",data.d16.b);
+					DebugPrintF("   beam %d,%d\n",beam_x.low & 0xFF,beam_y.low & 0xFF);
+					DebugPrintF("   wait_beam %d,%d\n",(int) xwait_beam,(int) ywait_beam); 
+					DebugPrintF("   color0: %08x\n",palette2[0].argb1);
+					break;
 	}
 }
 
@@ -534,6 +574,7 @@ void cop_move_(uint16 reg, uint16 data)
 }
 
 int to_draw_count = 0;
+int draw_count = 0;
 
 bool beam_y_is_visible = true;
 
@@ -620,7 +661,18 @@ void __render2()
 				beam_y.b32++;
 				draw_y = (beam_y.b32-display_y)*display_scale_y;
 
-//				DebugPrintF("bream_y: %d color0: %08x\n", beam_y, ecs2argb[0].argb);
+/*
+				if (draw_y < 294)
+				{
+					DebugPrintF("*** bream_y: %d, draw_y %d, color0: %08x draw_count %d\n"
+						, beam_y.low
+						, draw_y 
+						, palette2[0].argb1
+						, draw_count
+						);
+				}
+*/
+				draw_count = 0;
 
 				if ((draw_y<0) || (draw_y>480))
 				{

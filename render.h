@@ -76,6 +76,12 @@ typedef unsigned short uint16;
 #define COLOR14 0x19C
 #define COLOR15 0x19E
 
+#define COPDEBUGON	0xFFB0
+#define COPDEBUGOFF	0xFFC0
+#define COPSTAT		0xFFD0
+#define COPPAL 		0xFFE0
+#define COPDEBUG		0xFFF0
+
 #define lowres_clock 4
 
 #pragma pack(2)

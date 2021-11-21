@@ -56,4 +56,5 @@ extern void beam_displayed();
 extern void beam_displayed_in_window();
 
 extern const char *beam_fn_names[];
+extern const char *beam_flag_names[];
 
