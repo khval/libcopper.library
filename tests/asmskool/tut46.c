@@ -27,6 +27,12 @@ struct Custom *custom = &_custom;	// store locally... handle things with do_func
 struct Custom *custom = 0xDFF000;
 #endif
 
+#define COPDEBUGON	0xFFB0
+#define COPDEBUGOFF	0xFFC0
+#define COPSTAT		0xFFD0
+#define COPPAL 		0xFFE0
+#define COPDEBUG		0xFFF0
+
 #define BLTCON0 0x040
 #define BLTCON1 0x042
 #define BLTAFWM 0x044
@@ -1743,7 +1749,7 @@ void init_copper()
 {
 	uint16 *cop_ptr;
 
-Copper = malloc(  700 * 2 );
+Copper = malloc(  800 * 2 );
 
 cop_ptr = Copper;
 
