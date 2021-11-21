@@ -44,7 +44,7 @@ copperl2 = (uint32) ptr;
 	setCop( 0xFF01,0xFE01 );			// skip
 	setCop( COPJMP2,0x0000 );	
 */
-	for (n=0;n<0x1000;n++)
+	for (n=1;n<255;n++)
 	{
 		if ((n & 0x0F ) == 0)
 		{
