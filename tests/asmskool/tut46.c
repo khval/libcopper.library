@@ -2335,7 +2335,7 @@ void init_sin()
 	int i;
 	for (i = 0; i < (SineEnd - Sine) ; i++)
 	{
-		Sine[i] = sin( 2*M_PI * (double) i / (double) (SineEnd - Sine) ) * 45;
+		Sine[i] = sin( 2*M_PI * (double) i / (double) (SineEnd - Sine) ) * 37 ;
 	}
 }
 
