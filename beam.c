@@ -214,7 +214,20 @@ void fn_disp_window_ddf (struct ffdpart *this)
 
 // ******* table *******
 
-void *fns_hidden[]=
+
+void *fns_hidden_no_dff[]=
+{
+	fn_skip,
+	fn_skip,
+	fn_skip,
+	fn_skip,	
+	fn_skip,			
+	fn_skip,			// not in window
+	fn_skip,			// no fetch.. not in window...
+	fn_skip			// no fetch.. not in window..
+};
+
+void *fns_hidden_dff[]=
 {
 	fn_skip,
 	fn_window,
@@ -232,18 +245,10 @@ void *fns_displayed[]=
 	fn_skip,
 	fn_skip,
 	fn_skip,	
-/*
-	fn_disp,
-	fn_disp_window,
-	fn_disp_ddf,
-	fn_disp_window_ddf	
-*/
-
 	fn_disp,			
 	fn_disp,			// not in window
 	fn_disp,			// no fetch.. not in window...
 	fn_disp			// no fetch.. not in window..
-
 };
 
 void *fns_displayed_in_window[]=
@@ -258,16 +263,10 @@ void *fns_displayed_in_window[]=
 	fn_disp_window_ddf	
 };
 
-enum beam_state
-{
-	hidden,
-	displayed,
-	displayed_in_window
-} ;
-
 void **fns_tabels[] =
 {
-	fns_hidden,
+	fns_hidden_no_dff,
+	fns_hidden_dff,
 	fns_displayed,
 	fns_displayed_in_window
 };
@@ -306,7 +305,7 @@ void printBeamInfo( int items )
 
 
 
-enum beam_state beam_displyed = hidden;
+enum beam_state beam_displyed = hidden_no_dff;
 
 int decodeBeam()
 {
@@ -345,17 +344,31 @@ int decodeBeam()
 	return bInfo - bInfos +1;
 }
 
-void beam_hidden()
+void beam_hidden_no_dff()
 {
-	if (beam_displyed != hidden )
+	if (beam_displyed != hidden_no_dff )
 	{
 		struct ffdpart *bInfo;
 
 		for (bInfo=bInfos;bInfo < bInfos + beamParts; bInfo++)
 		{
-			bInfo -> fn = fns_hidden[ bInfo -> flags ];
+			bInfo -> fn = fns_hidden_no_dff[ bInfo -> flags ];
 		}
-		beam_displyed  = hidden;
+		beam_displyed  = hidden_no_dff;
+	}
+}
+
+void beam_hidden_dff()
+{
+	if (beam_displyed != hidden_dff )
+	{
+		struct ffdpart *bInfo;
+
+		for (bInfo=bInfos;bInfo < bInfos + beamParts; bInfo++)
+		{
+			bInfo -> fn = fns_hidden_dff[ bInfo -> flags ];
+		}
+		beam_displyed  = hidden_dff;
 	}
 }
 

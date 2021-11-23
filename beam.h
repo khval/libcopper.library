@@ -12,6 +12,14 @@ struct ffdpart
 
 #define beam_bpr 128
 
+enum beam_state
+{
+	hidden_no_dff,
+	hidden_dff,
+	displayed,
+	displayed_in_window
+} ;
+
 enum
 {
 	f_skip = 0,
@@ -51,7 +59,9 @@ extern int decodeBeam();
 extern void sync_beam();
 extern void printBeamInfo();
 
-extern void beam_hidden();
+extern void beam_hidden_dff();
+extern void beam_hidden_no_dff();
+// extern void beam_hidden_no_dff();
 extern void beam_displayed();
 extern void beam_displayed_in_window();
 

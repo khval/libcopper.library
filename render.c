@@ -434,7 +434,7 @@ void cop_move(union cop data)
 		case COLOR15: setPalette(15,ecs2argb[data.d16.b].argb);	 break;
 
 		case BPL1PTH:	setHigh16(bp0,data.d16.b);	bp0ptr = (unsigned char *) bp0;	break;
-		case BPL1PTL: 	setLow16(bp0,data.d16.b);	bp0ptr = (unsigned char *) bp0;	break;
+		case BPL1PTL: 	setLow16(bp0,data.d16.b);	bp0ptr = (unsigned char *) bp0; 	break;
 		case BPL2PTH: setHigh16(bp1,data.d16.b);	bp1ptr = (unsigned char *) bp1;	break;
 		case BPL2PTL: setLow16(bp1,data.d16.b);	bp1ptr = (unsigned char *) bp1;	break;
 		case BPL3PTH: setHigh16(bp2,data.d16.b);	bp2ptr = (unsigned char *) bp2;	break;
@@ -515,7 +515,6 @@ void cop_move(union cop data)
 					break;
 
 		case COPDEBUG:
-
 					DebugPrintF("\ncopper debug at line/code: %d\n",data.d16.b);
 					DebugPrintF("   beam %d,%d\n",beam_x.low & 0xFF,beam_y.low & 0xFF);
 					DebugPrintF("   wait_beam %d,%d\n",(int) xwait_beam,(int) ywait_beam); 
@@ -525,18 +524,38 @@ void cop_move(union cop data)
 }
 
 
+void debug_domod()
+{
+	if (copper_debug_on)
+	{
+		DebugPrintF("bpl1mod %d, bpl2mod %d\n", bpl1mod, bpl2mod);
+
+		switch( planes )
+		{
+			case 8:	DebugPrintF("BP7 %08x BP7PTR %08x DIFF %d\n", bp7,bp7ptr,bp7ptr-bp7);
+			case 7:	DebugPrintF("BP6 %08x BP6PTR %08x DIFF %d\n", bp6,bp6ptr,bp6ptr-bp6);
+			case 6:	DebugPrintF("BP5 %08x BP5PTR %08x DIFF %d\n", bp5,bp5ptr,bp5ptr-bp5);
+			case 5:	DebugPrintF("BP4 %08x BP4PTR %08x DIFF %d\n", bp4,bp4ptr,bp4ptr-bp4);
+			case 4:	DebugPrintF("BP3 %08x BP3PTR %08x DIFF %d\n", bp3,bp3ptr,bp3ptr-bp3);
+			case 3:	DebugPrintF("BP2 %08x BP2PTR %08x DIFF %d\n", bp2,bp2ptr,bp2ptr-bp2);
+			case 2:	DebugPrintF("BP1 %08x BP1PTR %08x DIFF %d\n", bp1,bp1ptr,bp1ptr-bp1);
+			case 1:	DebugPrintF("BP0 %08x BP0PTR %08x DIFF %d\n", bp0,bp0ptr,bp0ptr-bp0);
+		}
+	}
+}
+
 void domod()
 {
 	switch( planes )
 	{
-		case 7:	bp7ptr+=bpl2mod;
-		case 6:	bp6ptr+=bpl1mod;
-		case 5:	bp5ptr+=bpl2mod;
-		case 4:	bp4ptr+=bpl1mod;
-		case 3:	bp3ptr+=bpl2mod;
-		case 2:	bp2ptr+=bpl1mod;
-		case 1:	bp1ptr+=bpl2mod;
-		case 0:	bp0ptr+=bpl1mod;
+		case 8:	bp7ptr+=bpl2mod;
+		case 7:	bp6ptr+=bpl1mod;
+		case 6:	bp5ptr+=bpl2mod;
+		case 5:	bp4ptr+=bpl1mod;
+		case 4:	bp3ptr+=bpl2mod;
+		case 3:	bp2ptr+=bpl1mod;
+		case 2:	bp1ptr+=bpl2mod;
+		case 1:	bp0ptr+=bpl1mod;
 	}
 }
 
@@ -580,15 +599,14 @@ bool beam_y_is_visible = true;
 
 struct ffdpart *bInfo;
 
+extern enum beam_state beam_displyed;
+
 void __render2()
 {
 	int dwy;
 
 	int sxy,wxy;
 	int final;
-
-
-//	DebugPrintF("wait_beam %d,%d\n",(int) xwait_beam,(int) ywait_beam); 
 
 	if (ywait_beam != beam_y.b0)
 	{
@@ -604,7 +622,7 @@ void __render2()
 	sxy = (0 * beam_bpr + beam_x.low) ;	
 	wxy = (dwy * beam_bpr + xwait_beam);	
 
-//	DebugPrintF("sxy %08x wxy %08x\n",sxy,wxy); 
+//	if (copper_debug_on) DebugPrintF("sxy %08x wxy %08x\n",sxy,wxy); 
 
 	bInfo = bInfos;
 	final = wxy - sxy;
@@ -622,15 +640,13 @@ void __render2()
 		return;
 	}
 
-//	DebugPrintF("render %d words\n",final); 
+//	if (copper_debug_on) DebugPrintF("render %d words\n",final); 
 
 	beam_remain = final;
 	do
 	{
 		if (beam_remain)	// one beam_remain is 4 clocks... we have time to draw all, before fetch...
 		{
-//			DebugPrintF("to_draw_count %d\n",to_draw_count); 
-
 			if (to_draw_count)
 			{
 				do 
@@ -657,6 +673,11 @@ void __render2()
 			bInfo -> fn(bInfo);
 			if (beam_x.b32 == beam_bpr)
 			{
+				if ((beam_displyed  == displayed_in_window) || (beam_displyed  == displayed_in_window))
+				{
+					domod();
+//					debug_domod();
+				}
 				beam_x.b32 = 0;
 				beam_y.b32++;
 				draw_y = (beam_y.b32-display_y)*display_scale_y;
@@ -676,20 +697,24 @@ void __render2()
 
 				if ((draw_y<0) || (draw_y>480))
 				{
-					beam_hidden();
+					if (in_window_y(beam_y.b32))
+					{
+						beam_hidden_dff();
+					}
+					else
+					{
+						beam_hidden_no_dff();
+					}
 				}
 				else		// someting to display...
 				{
 					if (in_window_y(beam_y.b32))
 					{
-						if (beam_y.b32 - dispwindow.y0 >0) domod();
-
 						beam_displayed_in_window();
 					}
 					else
 					{
 						beam_displayed();
-//						beam_displayed_in_window();
 					}
 					dest_data = dest_ptr_image + draw_y * dest_bpr;
 				}
