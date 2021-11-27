@@ -62,17 +62,17 @@ void init_copper(int linestart, int height)
 {
 	int y;
 	uint32 *ptr = copperList;
-	uint32 backrgb = 0x000;
+	uint32 backrgb = 0xF0F;
 
 	// 5 instructions per line, and 3 extra at the end.
+
+	setCop(COLOR00, 0xFFF);
 	
 	for (y=linestart;y<linestart+height;y++)
 	{
-		setCop( (y<<8) | 1 , 0xFF00 );			// 0
-		setCop(BPLCON3,0);
-		setCop(COLOR01,(y-linestart) & 0xFFF);
-		setCop(BPLCON3,0x200);
-		setCop(COLOR03,(0xFFF-y) & 0xFFF);
+		setCop( (y<<8) | 1 , 0xFF00 );
+		setCop(COLOR00,(y-linestart) & 0xFFF);
+		setCop(COLOR01,(0xFFF-y) & 0xFFF);
 	}
 		
 	setCop( (y<<8) | 1 ,0);
@@ -105,7 +105,7 @@ int main_prog()
 				SetAPen(rport,1);
 				RectFill(rport,width/2,linestart,width-1,win -> Height-1);
 
-				SetAPen(rport,1);
+				SetAPen(rport,2);
 				RectFill(rport,0,linestart,width/2,win -> Height-1);
 
 				SetAPen(rport,3);
@@ -141,6 +141,7 @@ int main()
 		return 0;
 	}
 
+	init_ecs2colors();
 	ret = main_prog();
 
 	close_libs();

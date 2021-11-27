@@ -3,6 +3,9 @@
 // Displays checker pattern then scrolls each line indivdiually
 
 #include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -36,7 +39,52 @@ int i;
 ULONG linestart,lines,backrgb;
 ULONG x,y;
 
+
+struct TagItem tags_shared[] = {
+		{AVT_Type, MEMF_SHARED },
+		{TAG_END,TAG_END}};
+
 struct Window *win;
+
+struct BitMap *gfx_bm = NULL;
+
+
+void _FreeBitMap(struct BitMap *bm)
+{
+	if (bm->Planes[0]) FreeVec(bm->Planes[0]);
+	bm->Planes[0] = NULL;
+	FreeVec(bm);
+}
+
+struct BitMap *_AllocBitMap( int w, int h )
+{
+	struct BitMap *bm = NULL;
+	uint8 *bitplane;
+	int size  = w/8 * h;
+	bm = (struct BitMap *) AllocVecTagList( sizeof(struct BitMap), tags_shared);
+
+	if (bm)
+	{
+		bitplane = (uint8 *) AllocVecTagList( size, tags_shared);
+		if (bitplane)
+		{
+			bzero( bitplane, size);
+			InitBitMap( bm, 1, w, h );
+			bm -> Planes[0] = (void *) bitplane;
+			bm -> BytesPerRow = w/8;
+			bm -> Rows = h;
+		}
+		else
+		{
+			_FreeBitMap(bm);
+			bm = NULL;
+		}
+	}
+
+	return bm;
+}
+
+
 
 bool initScreen()
 {
@@ -54,7 +102,6 @@ bool initScreen()
 	if (!win) return false;
 
 	copperBitmap =AllocBitMap( win -> Width, win -> Height, 32, BMF_DISPLAYABLE, win ->RPort -> BitMap);
-
 	if (!copperBitmap)  return false;
 
 	return true;
@@ -70,17 +117,33 @@ void init_copper(int linestart, int height)
 {
 	uint32 *ptr = copperList;
 
+	setCop( BPL1PTH, (uint32) gfx_bm -> Planes[0] >> 16 );	
+	setCop( BPL1PTL, (uint32) gfx_bm -> Planes[0] & 0xFFFF );	
+	setCop( BPL1MOD, 0x0 );
+	setCop( BPL2MOD, 0x0 );
+	setCop( COLOR00,0x0FFF );
+	setCop( COLOR01,0x0F00 );
+	setCop( BPLCON0,0x1200 );	
+	setCop( DIWSTART,0x2081);
+	setCop( DIWSTOP, ((199 + 0x20 ) << 8) | 0xC1);
+
+	setCop( DDFSTART,0x0038 );
+	setCop( DDFSTOP,0x00D0 );
+
 	for (i=linestart;i<linestart+height;i++)
 	{
-		setCop(i << 8  | 1,0);
-  		setCop(BPLCON3,0);
+		setCop(i << 8  | 1,0xFFFE);
   		setCop(COLOR00,(i-linestart) & 0xFFF);
-  		setCop(BPLCON3,0x200);
-  		setCop(COLOR00,(0xFFF-i) & 0xFFF);
+  		setCop(COLOR01,(0xFFF-i) & 0xFFF);
+		setCop(i << 8  | 11 << 1 | 1,0xFFFE);
+  		setCop(COLOR01,(i+21) & 0xFFF);
+		setCop(i << 8  | 15 << 1 | 1,0xFFFE);
+  		setCop(COLOR01, i & 0xFF << 4 | 0x00F);
 	}
 	
 	setCop(i << 8  | 1,0);
 	setCop(COLOR00,backrgb);
+
 	setCop(0xFFFF,0xFFFE);
 }
 
@@ -93,26 +156,39 @@ void closeDown()
 	copperBitmap = NULL;
 }
 
-void draw_bitamp()
+void draw_bitmap( struct RastPort *rp )
 {
-	rport = win -> RPort;
-	SetAPen(rport,1);
-	for (y=0;y<256;y+=64) for (x=0;x<192;x+=64) RectFill(rport,x,y,x+31,y+31);
+	SetAPen(rp,1);
+	for (y=0;y<256;y+=64) for (x=0;x<192;x+=64) RectFill(rp,x,y,x+31,y+31);
 }
 
 int main_prog()
 {
+	DebugPrintF("%s\n",__FUNCTION__);
+
 	if (initScreen())
 	{
-		init_copper(0, win -> Height);
+		gfx_bm = _AllocBitMap( 320, 200 );
 
-		draw_bitamp();
+		if (gfx_bm)
+		{
+			struct RastPort rp;
+			InitRastPort(&rp); 
+			rp.BitMap = gfx_bm;
+
+			init_copper(0, win -> Height);
+			draw_bitmap( &rp );
 	
-		dump_copper( copperList );
-		render_copper( custom, copperList , copperBitmap );
-    		BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
+//				dump_copper( copperList );
 
-		WaitLeftMouse(win);
+			render_copper( custom, copperList , copperBitmap );
+   	 		BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
+
+			WaitLeftMouse(win);
+
+			_FreeBitMap(gfx_bm);
+			gfx_bm = NULL;
+		}
 	}
 	else
 	{
@@ -127,6 +203,7 @@ int main_prog()
 int main()
 {
 	int ret;
+	DebugPrintF("%s\n",__FUNCTION__);
 
 	if (open_libs()==FALSE)
 	{
@@ -135,6 +212,7 @@ int main()
 		return 0;
 	}
 
+	init_ecs2colors();
 	ret = main_prog();
 
 	close_libs();
