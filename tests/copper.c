@@ -20,50 +20,42 @@ struct Custom *custom = &_custom;	// store locally... handle things with do_func
 struct Custom *custom = 0xDFF000;
 #endif
 
+uint32 *update_copper_list(uint32 *ptr, int nStart)
+{
+
+	int n,nn;
+	int t;
+	int y;
+
+	setCop( COLOR00, 0 );
+
+	for (n=0;n<255;n++)
+	{
+
+		if ((n & 0x07 ) == 0)
+		{
+			y = n  +60;
+		 	setCop( (y << 8) | 1, 0xFF00);
+
+			t++;
+		}
+
+		nn = n + nStart;
+
+		setCop( COLOR00, (t & 1) ? nn : 0xFFF-nn );
+	}
+
+	return ptr;
+}
+
 void init_copper_list()
 {
-	int y,x;
-	int n;
 	uint32 *ptr = (uint32 *) copperList;
-/*
-copperl1 = (uint32) ptr;
 
-	setCop( COLOR00,0x0F00 );		// move
-	setCop( 0x0F01,0x8F00 );			// wait
-	setCop( INTREQ,0x8010 );		// move
-	setCop( 0x00E3,0x80FE );		// wait
-	setCop( 0x7F01,0x7F01 );			// skip
-	setCop( COPJMP1,0x0000 );	
-
-copperl2 = (uint32) ptr;
-
-	setCop( COLOR00,0x0F0 );		// move
-	setCop( 0x0F01,0x8F00 );			// wait
-	setCop( INTREQ,0x8010 );		// move
-	setCop( 0x00E3,0x80FE );		// wait
-	setCop( 0xFF01,0xFE01 );			// skip
-	setCop( COPJMP2,0x0000 );	
-*/
-	for (n=1;n<255;n++)
-	{
-		if ((n & 0x0F ) == 0)
-		{
-			y = (n >> 4) +60;
-		 	setCop( (y << 8) | 1, 0xFF00);
-		}
-		setCop( COLOR00, n );
-	}
+	ptr = update_copper_list(ptr, 0);
 
 	setCop( 0xFFFF,0xFFFE );	
 
-	cop_move_(COP1LCH,copperl1 >> 16);
-	cop_move_(COP1LCL,copperl1 & 0xFFFF);
-
-	cop_move_(COP2LCH,copperl2 >> 16);
-	cop_move_(COP2LCL,copperl2 & 0xFFFF);
-
-	printf("COP1LC: %d\n", COP1LC);
-	printf("COP2LC: %d\n", COP2LC);
 }
 
 
@@ -91,14 +83,14 @@ int main()
 
 		if ((win)&&(copperBitmap))
 		{
+			int y = 0;
+			bool quit = false;
 			struct RastPort rp;
-
 			InitRastPort(&rp);
 
 			rp.BitMap = copperBitmap;
 
 			RectFillColor(&rp, 0, 0, win -> Width, win -> Height, 0xFF000000);
-
 
 			cop_move_(DIWSTART,0x2C81);
 			cop_move_(DIWSTOP,0xF4C1);
@@ -109,20 +101,22 @@ int main()
 			int wc = DispDataFetchWordCount( 0, ddfstart, ddfstop);
 
 			init_copper_list();
-			render_copper( custom, copperList,  copperBitmap );
-//			comp_window_update( copperBitmap, win);
-
-    			BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
-
-			printf("data fetch start %d (pixels %d)\n",ddfstart,DispDataFetchWordCount( 0, 0,ddfstart)*16);
-			printf("data fetch word count %d (pixels %d)\n",wc,wc*16);
 
 			int diwstarty = diwstart >> 8 ;
 			int diwstopy = diwstop >> 8 ;
 
-			printf("rows %d\n", (diwstopy & 0x80 ? diwstopy : diwstopy + 0x100) - diwstarty );
+			do
+			{
+				WaitTOF();
+				render_copper( custom, copperList,  copperBitmap );
+    				BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
 
-			WaitLeftMouse(win);
+				update_copper_list(copperList, y ++ );
+
+				if (checkMouse(win, 1)) quit = true;
+
+			} while( ! quit );
+
 		}
 
 		if (win)
