@@ -496,7 +496,7 @@ void Part1()
 //    *--- scroller ---*
 
 							//	move.w Cmd_StopCount(PC),d0
-	if ( !Cmd_StopCount)			//	beq.s .normal
+	if ( Cmd_StopCount)			//	beq.s .normal
 		Cmd_StopCount--;		//	subq.w #1,Cmd_StopCount
 	else						//	bra.s .skipscroll
 	{						//.normal:
@@ -885,8 +885,6 @@ void Init()											//Init:
 {												//	movem.l d0-a6,-(sp)
 	movem_push(RD0,RA6);
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
 	d1=0;										//	moveq #0,d1
 	a1 = (uint32) Screen;							//	lea Screen,a1
 	d0 = bplsize*FontBpls/2;							//	move.w #bplsize*FontBpls/2-1,d0
@@ -1025,8 +1023,6 @@ void Init()											//Init:
 
 	}											//	dbf d7,.skyl
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
 	st_b(a1,d0); a1++;								//	move.b d0,(a1)+			;vstart
 	st_b(a1,ld_b(a1)+1); a1++;						//	addq.b #1,(a1)+			;add speed to hpos
 	D0.b0+=1;									//	addq.b #1,d0			;increase vstop value
@@ -1040,8 +1036,6 @@ void Init()											//Init:
 	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
 	D0.b0+=1;									//	addq.b #1,d0			;increase vstop value
 	st_w(a1,ld_w(a1)+5);							//	addq.w #5,a1
-
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 //    *--- below line 0xff ---*
 
@@ -1062,8 +1056,6 @@ void Init()											//Init:
 	D0.b0+=1;									//	addq.b #1,d0			;increase vstop value
 	st_b(a1,d6); a1++;								//	move.b d6,(a1)+
 	a1+=4;										//	addq.w #4,a1			;skip to next sprite control words
-
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 	for(d7=5;d7;d7--)								//	moveq #5-1,d7
 	{											//.floorl:	
@@ -1101,8 +1093,6 @@ void Init()											//Init:
 
 	}											//	dbf d7,.floorl
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
 //    *--- odd lines sprites ---*
 
 	a1 = (uint32) StarSpr2;							//	lea StarSpr2,a1
@@ -1139,8 +1129,6 @@ void Init()											//Init:
 
 	}											//	dbf d7,.skyl2
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
 	st_b(a1,d0); a1++;								//	move.b d0,(a1)+			;vstart
 	st_b(a1,ld_b(a1)+1); a1++;						//	addq.b #1,(a1)+			;add speed to hpos
 	D0.b0++;										//	addq.b #1,d0			;increase vstop value
@@ -1158,8 +1146,6 @@ void Init()											//Init:
 
 //    *--- below line 0xff ---*
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
 	d6 =	bin8(0,0,0,0,0,1,1,0);								//	moveq #%00000110,d6
 
 	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
@@ -1170,8 +1156,6 @@ void Init()											//Init:
 	st_b(a1,d6); a1++;								//	move.b d6,(a1)+
 	a1+=4;										//	addq.w #4,a1			;skip to next sprite control words
 
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
-
 	st_b(a1,d0); a1++;								//	move.b d0,(a1)+
 	st_b(a1,ld_b(a1)+3); a1++;						//	addq.b #3,(a1)+
 	D0.b0++;										//	addq.b #1,d0
@@ -1179,8 +1163,6 @@ void Init()											//Init:
 	D0.b0++;										//	addq.b #1,d0			;increase vstop value
 	st_b(a1,d6); a1++;								//	move.b d6,(a1)+
 	a1+=4;										//	addq.w #4,a1			;skip to next sprite control words
-
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
 
 	for(d7=5;d7;d7--)								//	moveq #5-1,d7
 	{											//.floorl2:
