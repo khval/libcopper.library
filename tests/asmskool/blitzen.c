@@ -267,7 +267,9 @@ void blitzenWrite( uint16 reg, uint16 value, BOOL *handled, struct blitstate *bs
   }
 }
 
+extern uint8 *Screen;
 
+int blitzenDebug = 0;
 
 // BLTSIZE or BLTSIZH has been written to,
 // so start a new blit.
@@ -279,8 +281,9 @@ void blitzenBlit( struct blitstate *bs )
   uint16 tmp, atmp, astmp, zflag;
   uint32 i, wc;
 
-/*
-  printf( "Blit:\n" );
+if (blitzenDebug == 1)
+{ 
+ printf( "Blit:\n" );
   printf( "Flags:    %02X\n", bs->b_Flags );
   printf( "Use:      %02X\n", bs->b_UseCode );
   printf( "MinTerms: %02X\n", bs->b_MinTerms );
@@ -298,7 +301,7 @@ void blitzenBlit( struct blitstate *bs )
   printf( "D Mod:    %ld\n",  bs->b_dmod );
   printf( "Width:    %d\n",   bs->b_Width );
   printf( "Height:   %d\n",   bs->b_Height );
-*/
+}
   zflag = DMAF_BLTNZERO;
   
   adat = bs->b_adat;
@@ -441,6 +444,8 @@ void blitzenBlit( struct blitstate *bs )
   // Descending mode?
   if( bs->b_Flags & 2 )
   {
+	if (blitzenDebug == 1) printf("Descending mode\n");
+
     // Do the blit
     while( bs->b_Height )
     {
@@ -538,6 +543,14 @@ void blitzenBlit( struct blitstate *bs )
     }
     return;
   }
+
+
+if (blitzenDebug == 1) printf("std mode\n");
+
+if (blitzenDebug == 1) printf("USE_A %d\n",bs->b_UseCode & USE_A);
+if (blitzenDebug == 1) printf("USE_B %d\n",bs->b_UseCode & USE_B);
+if (blitzenDebug == 1) printf("USE_C %d\n",bs->b_UseCode & USE_C);
+if (blitzenDebug == 1) printf("USE_D %d\n",bs->b_UseCode & USE_D);
 
   // Do the blit
   while( bs->b_Height )
