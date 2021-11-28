@@ -34,11 +34,13 @@ bool checkMouse(struct Window *win, ULONG bcode)
 	BOOL buttonClicked = false;
 	struct IntuiMessage *msg;
 	ULONG win_mask = 1 << win -> UserPort ->mp_SigBit ;
-	ULONG sig = Wait( win_mask | SIGBREAKF_CTRL_C);
+//	ULONG sig = Wait( win_mask | SIGBREAKF_CTRL_C);
 
 	do
 	{
 		msg = (struct IntuiMessage *) GetMsg( win -> UserPort );
+
+//		printf("msg: %08x\n",msg);
 
 		if (msg)
 		{
