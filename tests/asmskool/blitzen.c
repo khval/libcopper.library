@@ -283,24 +283,29 @@ void blitzenBlit( struct blitstate *bs )
 
 if (blitzenDebug == 1)
 { 
- printf( "Blit:\n" );
-  printf( "Flags:    %02X\n", bs->b_Flags );
-  printf( "Use:      %02X\n", bs->b_UseCode );
-  printf( "MinTerms: %02X\n", bs->b_MinTerms );
-  printf( "A Shift:  %02X\n", bs->b_AShift );
-  printf( "B Shift:  %02X\n", bs->b_BShift );
-  printf( "FWM:      %04X\n", bs->b_AFWM );
-  printf( "LWM:      %04X\n", bs->b_ALWM );
-  printf( "A Ptr:    %p\n",   bs->b_aptr );
-  printf( "B Ptr:    %p\n",   bs->b_bptr );
-  printf( "C Ptr:    %p\n",   bs->b_cptr );
-  printf( "D Ptr:    %p\n",   bs->b_dptr );
-  printf( "A Mod:    %ld\n",  bs->b_amod );
-  printf( "B Mod:    %ld\n",  bs->b_bmod );
-  printf( "C Mod:    %ld\n",  bs->b_cmod );
-  printf( "D Mod:    %ld\n",  bs->b_dmod );
-  printf( "Width:    %d\n",   bs->b_Width );
-  printf( "Height:   %d\n",   bs->b_Height );
+	printf( "Blit:\n" );
+	printf( "Flags:    %02X\n", bs->b_Flags );
+	printf( "Use:      %02X - (%s%s%s%s)\n", bs->b_UseCode, 
+			(bs->b_UseCode & USE_A) ? "A" : "",
+			(bs->b_UseCode & USE_B) ? "B" : "",
+			(bs->b_UseCode & USE_C) ? "C" : "",
+			(bs->b_UseCode & USE_D) ? "D" : "" );
+
+	printf( "MinTerms: %02X\n", bs->b_MinTerms );
+	if (bs->b_UseCode & USE_A) printf( "A Shift:  %02X\n", bs->b_AShift );
+	if (bs->b_UseCode & USE_B) printf( "B Shift:  %02X\n", bs->b_BShift );
+	printf( "FWM:      %04X\n", bs->b_AFWM );
+	printf( "LWM:      %04X\n", bs->b_ALWM );
+	if (bs->b_UseCode & USE_A) printf( "A Ptr:    %p\n",   bs->b_aptr );
+	if (bs->b_UseCode & USE_B) printf( "B Ptr:    %p\n",   bs->b_bptr );
+	if (bs->b_UseCode & USE_C) printf( "C Ptr:    %p\n",   bs->b_cptr );
+	if (bs->b_UseCode & USE_D) printf( "D Ptr:    %p\n",   bs->b_dptr );
+	if (bs->b_UseCode & USE_A) printf( "A Mod:    %ld\n",  bs->b_amod );
+	if (bs->b_UseCode & USE_B) printf( "B Mod:    %ld\n",  bs->b_bmod );
+	if (bs->b_UseCode & USE_C) printf( "C Mod:    %ld\n",  bs->b_cmod );
+	if (bs->b_UseCode & USE_D) printf( "D Mod:    %ld\n",  bs->b_dmod );
+	printf( "Width:    %d\n",   bs->b_Width );
+	printf( "Height:   %d\n",   bs->b_Height );
 }
   zflag = DMAF_BLTNZERO;
   
@@ -309,14 +314,14 @@ if (blitzenDebug == 1)
   bdat = bs->b_bdat;
   cdat = bs->b_cdat;
 
-//	printf("%s:%d\n",__FUNCTION__,__LINE__);
+if (blitzenDebug == 1) printf("%s:%d\n",__FUNCTION__,__LINE__);
   
   if( bs->b_LineMode )
   {
     BOOL singlemode = (bs->b_BLTCON1&0x0002) ? 0x0000 : 0xffff;
     uint32 singlemask = 0xffff;
     
-	printf("%s:%d\n",__FUNCTION__,__LINE__);
+if (blitzenDebug == 1) printf("%s:%d\n",__FUNCTION__,__LINE__);
 
     // This is roughly based on the MESS source code (machine/amiga.c)
     wc = bs->b_Height;
@@ -441,108 +446,114 @@ if (blitzenDebug == 1)
   astmp = 0;
   bsdat = 0;
 
-  // Descending mode?
-  if( bs->b_Flags & 2 )
-  {
-	if (blitzenDebug == 1) printf("Descending mode\n");
+	// Descending mode?
+	if( bs->b_Flags & 2 )
+	{
+		if (blitzenDebug == 1) printf("Descending mode\n");
 
-    // Do the blit
-    while( bs->b_Height )
-    {
-      wc = bs->b_Width;
-      while( wc )
-      {
-        tmp = adat;
-        if( bs->b_UseCode & USE_A )
-          tmp   = *(bs->b_aptr--);  // Get A channel data
-        adat  = asdat|(tmp<<aso);
-        asdat = tmp>>asi;
-        if( wc == bs->b_Width ) tmp &= bs->b_AFWM; // Apply first & last word masks
-        if( wc == 1 )           tmp &= bs->b_ALWM;
-        atmp  = astmp|(tmp<<aso); // Calculate shifted A data
-        astmp = tmp>>asi;         // Remember shifted out bits for next time
+		// Do the blit
+		while( bs->b_Height )
+		{
+			wc = bs->b_Width;
+			while( wc )
+			{
+				tmp = adat;
+				if( bs->b_UseCode & USE_A )
+					tmp   = *(bs->b_aptr--);  // Get A channel data
 
-        tmp = bdat;
-        if( bs->b_UseCode & USE_B )
-          tmp   = *(bs->b_bptr--);  // Get B channel data
-        bdat  = bsdat|(tmp<<bso); // Calculated shifted B data
-        bsdat = tmp>>bsi;         // Remember shifted out bits for next time
+				adat  = asdat|(tmp<<aso);
+				asdat = tmp>>asi;
 
-        if( bs->b_UseCode & USE_C ) cdat = *(bs->b_cptr--);    
+				if( wc == bs->b_Width ) tmp &= bs->b_AFWM; // Apply first & last word masks
+				if( wc == 1 )           tmp &= bs->b_ALWM;
 
-        // Apply minterms
-        ddat = 0;
-        for( i=0x8000; i>0; i>>=1 )
-        {
-          tmp = 0;
-          if( cdat&i ) tmp |= 1;
-          if( bdat&i ) tmp |= 2;
-          if( adat&i ) tmp |= 4;
-          if( bs->b_MinTerms & (1<<tmp) ) ddat |= i;
-        }
+				atmp  = astmp|(tmp<<aso); // Calculate shifted A data
+				astmp = tmp>>asi;         // Remember shifted out bits for next time
+
+				tmp = bdat;
+				if( bs->b_UseCode & USE_B )
+					tmp   = *(bs->b_bptr--);  // Get B channel data
+
+				bdat  = bsdat|(tmp<<bso); // Calculated shifted B data
+				bsdat = tmp>>bsi;         // Remember shifted out bits for next time
+
+				if( bs->b_UseCode & USE_C ) cdat = *(bs->b_cptr--);    
+
+				// Apply minterms
+				ddat = 0;
+				for( i=0x8000; i>0; i>>=1 )
+				{
+					tmp = 0;
+					if( cdat&i ) tmp |= 1;
+					if( bdat&i ) tmp |= 2;
+					if( adat&i ) tmp |= 4;
+					if( bs->b_MinTerms & (1<<tmp) ) ddat |= i;
+				}
           
-        // Fill?
-        tmp = 0;
-        switch( bs->b_FillMode )
-        {
-          case 1:
-            // Inclusive
-            for( i=1; i<0x10000; i<<=1 )
-            {
-              if( ddat&i )
-              {
-                bs->b_FillBit ^= 1;
-                tmp |= i;
-              } else {
-                if( bs->b_FillBit ) tmp |= i;
-              }
-            }
-            ddat = tmp;
-            break;
+				// Fill?
+				tmp = 0;
+				switch( bs->b_FillMode )
+				{
+					case 1:
+						// Inclusive
+						for( i=1; i<0x10000; i<<=1 )
+						{
+							if( ddat&i )
+							{
+								bs->b_FillBit ^= 1;
+								tmp |= i;
+							} else {
+								if( bs->b_FillBit ) tmp |= i;
+							}
+						}
+						ddat = tmp;
+						break;
           
-          case 2:
-          case 3:
-            // Exclusive
-            for( i=1; i<0x10000; i<<=1 )
-            {
-              if( ddat&i )
-                bs->b_FillBit ^= 1;
-              if( bs->b_FillBit ) tmp |= i;
-            }
-            ddat = tmp;
-            break;
-        }
+					case 2:
+					case 3:
+						// Exclusive
+						for( i=1; i<0x10000; i<<=1 )
+						{
+							if( ddat&i )
+								bs->b_FillBit ^= 1;
+
+							if( bs->b_FillBit ) tmp |= i;
+						}
+						ddat = tmp;
+						break;
+				}
         
-        if( ddat ) zflag = 0;
+				if( ddat ) zflag = 0;
         
-        if( bs->b_UseCode & USE_D )
-          *(bs->b_dptr--) = ddat;
+				if( bs->b_UseCode & USE_D )
+					*(bs->b_dptr--) = ddat;
 
-        wc--;
-      }
+				wc--;
+			}
 
-      bs->b_Height--;
-      if( bs->b_UseCode & USE_A ) bs->b_aptr -= bs->b_amod;
-      if( bs->b_UseCode & USE_B ) bs->b_bptr -= bs->b_bmod;
-      if( bs->b_UseCode & USE_C ) bs->b_cptr -= bs->b_cmod;
-      if( bs->b_UseCode & USE_D ) bs->b_dptr -= bs->b_dmod;
-    }
+			bs->b_Height--;
+			if( bs->b_UseCode & USE_A ) bs->b_aptr -= bs->b_amod;
+			if( bs->b_UseCode & USE_B ) bs->b_bptr -= bs->b_bmod;
+			if( bs->b_UseCode & USE_C ) bs->b_cptr -= bs->b_cmod;
+			if( bs->b_UseCode & USE_D ) bs->b_dptr -= bs->b_dmod;
+		}
 
-    // Finished!
-    bs->b_adat = adat;
-    bs->b_bdat = bdat;
-    bs->b_cdat = cdat;
-    bs->b_Busy = 0;
-    bs->b_INTREQ |= INTF_BLIT;
-    bs->b_DMACON |= zflag;
-    if( ( !bs->b_CausePending ) &&
-        ( ( bs->b_INTREQ & bs->b_INTENA ) != 0 ) )
-    {
-      bs->b_CausePending = TRUE;
-      Cause( &bs->b_SoftInt );
-    }
-    return;
-  }
+	// Finished!
+	bs->b_adat = adat;
+	bs->b_bdat = bdat;
+	bs->b_cdat = cdat;
+	bs->b_Busy = 0;
+	bs->b_INTREQ |= INTF_BLIT;
+	bs->b_DMACON |= zflag;
+
+	if( ( !bs->b_CausePending ) &&
+		( ( bs->b_INTREQ & bs->b_INTENA ) != 0 ) )
+	{
+		bs->b_CausePending = TRUE;
+		Cause( &bs->b_SoftInt );
+	}
+	return;
+}
 
 
 if (blitzenDebug == 1) printf("std mode\n");
