@@ -350,25 +350,7 @@ void Part1()
 
  //   *--- clear clouds ---*
 
-
-//******* Added some stuff here to clear sky, workaround for bug in blitzen  *******	
-
-	a3= (uint32) *SkyBufferL;				// move.l SkyBufferL(PC),a1
-
-	d7 = (SkyE-Sky) / 4;
-	for (;d7>0;d7--)
-	{
-		st_l(a3,0x00000000);
-		a3+=4;
-	}
-
-//*******************************************************************************
-
-// Code below does not work with blitzen, does not support blitcon0 = 0x01000000
-
-/********************************************************************************/
-#if 0
-	a1= (uint32) SkyBufferL;				// move.l SkyBufferL(PC),a1
+	a1= (uint32) SkyBufferL[0];			// move.l SkyBufferL(PC),a1
 	a3 = (uint32) CloudCoordsLP[0]; 		// move.l CloudCoordsLP(PC),a3
 
 	for (d7 = cloudcount;d7;d7--)			// moveq #cloudcount-1,d7
@@ -383,13 +365,9 @@ void Part1()
 		
 		a3+=2;						//	addq.w #2,a3			;skip speed value.
 		d4 = 0x01000000;				//	move.l #0x01000000,d4		;clear blit
-
-		printf("Clear PlotBob x: %d, y: %d\n",d0,d1);
-
 		PlotBob();
 	}								//	dbf d7,.clearl
 
-#endif
 /*********************************************************************************/
 
 // @bouncescroller was here
@@ -2216,13 +2194,16 @@ void uload_files()
 
 void bss_c()
 {
+	int size;
 	printf("size of screen: %d\n",bplsize*FontBpls);
 
-	Sky = malloc( skybwid*(220+1));
-	SkyE = Sky + ( skybwid*(220+1) ); 
+	size = skybwid * (220+1);
 
-	Sky2 = malloc( skybwid*(220+1));
-	Sky2E = Sky2 + ( skybwid*(220+1) ); 
+	Sky = malloc( size );
+	SkyE = Sky + size;
+
+	Sky2 = malloc( size );
+	Sky2E = Sky2 + size; 
 
 }
 
@@ -2447,6 +2428,7 @@ bool validAddress(uint8 *ptr)
 			{Screen,ScreenE},
 			{Sky,SkyE},
 			{Sky2,Sky2E},
+			{Logo,LogoE},
 			{NULL,NULL}
 		};
 
@@ -2472,7 +2454,7 @@ void _doBlitter( struct Custom *custom )
 
 	if (validAddress( (uint8 *) dptr) == false)
 	{
-		printf("not a valied address\n");
+		printf("not a valied address: %08x\n", dptr);
 		return;
 	}
 
