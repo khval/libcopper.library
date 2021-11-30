@@ -27,6 +27,8 @@ struct Custom *custom = &_custom;	// store locally... handle things with do_func
 struct Custom *custom = 0xDFF000;
 #endif
 
+
+
 #define COPDEBUGON	0xFFB0
 #define COPDEBUGOFF	0xFFC0
 #define COPSTAT		0xFFD0
@@ -116,7 +118,7 @@ uint8		Cmd_Bounce=0;							//Cmd_Bounce:
 												//	dc.b 0
 uint16	Cmd_StopCount=0;							//Cmd_StopCount:
 												//	dc.w 0
-#define DEMO "tut46.c"
+#define DEMO "TUT46.c"
 
 uint32 NullSpr[] = {
 	 0x2a20,0x2b00
@@ -131,7 +133,7 @@ char ScrollText[] =
 	"HELLO, AMIGA CODERS! THIS IS PHOTON PRESENTING THE "
 	"   // ASMSKOOL \x01" DEMO " FROM THE AMIGA HARDWARE "
 	"PROGRAMMING SERIES ON YOUTUBE. IT'S A SIMPLE "
-//	"DEMO WITH A        -BOUNC!NG-\x02\xB4        SCROLLER, "
+//	"DEMO WITH A        -BOUNC!NG-\x002\x0B4        SCROLLER, "
 	"MOVING RASTERBAR, BOB PARALLAX, AND SPRITE STARFIELD.        "
 	"GREETINGS TO        SCOOPEX MEMBERS AND ALL DEMOSCENE FRIENDS, "
 	"EAB FRIENDS, AND SPECIAL SHOUTS TO TONI, JENS, BIFAT, BONEFISH, "
@@ -494,7 +496,8 @@ void Part1()
 			PlotChar();		//	bsr.w PlotChar			;preserves a0
 			d0=0;			//	clr.w d0
 		}					//.nowrap:
-		else 	ScrollCtr=d0;		//	move.w d0,ScrollCtr
+
+		ScrollCtr=d0;			//	move.w d0,ScrollCtr
 
 	}						//.skipscroll:
 
@@ -684,6 +687,11 @@ void VBint()			//					;Blank template VERTB interrupt
 #define row	(288*3*20/8)
 #define col	4
 
+extern int blitzenDebug ;
+
+#undef plotY
+#define plotY 70
+
 void PlotChar()										//PlotChar:	;a0=scrollptr
 {												//;	movem.l d0-a6,-(sp)
 	a0 = (uint32) ScrollPtr;							//	move.l ScrollPtr(PC),a0
@@ -726,35 +734,37 @@ void PlotChar()										//PlotChar:	;a0=scrollptr
 
 	printf("%c\n",d0);
 
-	
 	ScrollPtr = (void *) a0;							//	move.l a0,ScrollPtr
 	LastChar =  d0;									//	move.b d0,LastChar
-
 	d0 -= 32;										//	sub.w #32,d0
 	a0 = (uint32) FontTbl;							//	lea FontTbl(PC),a0
 	d0 = ld_b(a0+d0);								//	move.b (a0,d0.w),d0
-	d0 /= 9;										//	divu #9,d0			;row
-	d1 = D0.hw ;								//	move.l d0,d1
-												//	swap d1				;remainder (column)
-
-	d0 *= row;									//	mulu #row,d0
-	d1 *= col;										//	mulu #col,d1
-
+	D0.hw = D0.lw % 9;								//	divu #9,d0			;row
+	D0.lw /= 9;
+	d1 = d0 ;										//	move.l d0,d1
+	d1 = (D1.lw << 16) | D1.hw;						//	swap d1				;remainder (column)
+	d0 = D0.lw * row;								//	mulu #row,d0
+	d1 = D1.lw * col;								//	mulu #col,d1
 	d0 += d1;									//	add.l d1,d0			;offset into font bitmap
 	d0 += (uint32) Font;							//	add.l #Font,d0
 
 	WAITBLIT();									//	WAITBLIT
 
-	st_l(a6+BLTCON0, 0x09f00000);					//	move.l #0x09f00000,BLTCON0(a6)
+// A= AC
+// 9 = AD
+// 5 = BD
+
+	st_l(a6+BLTCON0, 0x09F00000);					//	move.l #0x09f0 0000,BLTCON0(a6)
 	st_l(a6+BLTAFWM, 0xFFFFFFFF);					//	move.l #0xffffffff,BLTAFWM(a6)
 	st_l(a6+BLTAPTH, d0);							//	move.l d0,BLTAPTH(a6)
 	st_l(a6+BLTDPTH, Screen+ScrBpl*3*plotY+plotX/8)	;	//	move.l #Screen+ScrBpl*3*plotY+plotX/8,BLTDPTH(a6)
 	st_w(a6+BLTAMOD, FontBpl-col);					//	move.w #FontBpl-col,BLTAMOD(a6)
-	st_w(a6+BLTDMOD, ScrBpl-col);					//	move.w #ScrBpl-col,BLTDMOD(a6)
-
+	st_w(a6+BLTDMOD, ScrBpl-col );					//	move.w #ScrBpl-col,BLTDMOD(a6)
 	st_w(a6+BLTSIZE, 20*3*64+2);					//	move.w #20*3*64+2,BLTSIZE(a6)
 
-	_doBlitter( custom );
+	blitzenDebug = 0;
+	_doBlitter( custom );	
+	blitzenDebug = 0;
 
 	movem_pop(RD0,RA6);							//;	movem.l (sp)+,d0-a6
 }												//	rts
@@ -827,6 +837,13 @@ void PlotBob()										//PlotBob:		;d0-d3/a0-a2=x,y,width,h,src,dest,mask,BLTCO
 }												//	rts
 
 
+#define bltoffs	(plotY*ScrBpl*3)
+#define blth	20
+#define bltw	(w/16)
+#define bltskip	0
+#define brcorner (blth*ScrBpl*3-2)
+
+
 void Scrollit()										//Scrollit:
 {			//    ---  scroll!  ---
 												//bltoffs	=plotY*ScrBpl*3
@@ -835,11 +852,6 @@ void Scrollit()										//Scrollit:
 												//bltskip	=0				;modulo
 												//brcorner=blth*ScrBpl*3-2
 
-#define bltoffs	(plotY*ScrBpl*3)
-#define blth	20
-#define bltw	(w/16)
-#define bltskip	0
-#define brcorner (blth*ScrBpl*3-2)
 
 	//movem_push(RD0,RA6);						//;	movem.l d0-a6,-(sp)
 
@@ -853,7 +865,6 @@ void Scrollit()										//Scrollit:
 	st_w(a6+BLTDMOD, bltskip);						//	move.w #bltskip,BLTDMOD(a6)
 	st_w(a6+BLTSIZE, blth*3*64+bltw);					//	move.w #blth*3*64+bltw,BLTSIZE(a6)
 
-	doBlitter( custom );	// activate blitter...
 	_doBlitter( custom );	// activate blitter...
 
 	//movem_pop(RD0,RA6);							//;	movem.l (sp)+,d0-a6
@@ -2298,7 +2309,7 @@ void init_sin()
 	int i;
 	for (i = 0; i < (SineEnd - Sine) ; i++)
 	{
-		Sine[i] = sin( 2*M_PI * (double) i / (double) (SineEnd - Sine) ) * 37 ;
+		Sine[i] = cos( 2*M_PI * (double) i / (double) (SineEnd - Sine) ) * 37 ;
 	}
 }
 
