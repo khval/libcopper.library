@@ -42,6 +42,11 @@ void movem_pop(uint32 reg_low, uint32 reg_hi)
 	}
 }
 
+int stack_size( union reg_u *stack )
+{
+	return emu_stack_ptr - stack;
+}
+
 void dump_stack( union reg_u *stack )
 {
 	int i;

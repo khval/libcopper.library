@@ -47,6 +47,7 @@ extern union reg_u *regArray[];
 
 void movem_push(uint32 reg_low, uint32 reg_hi);
 void movem_pop(uint32 reg_low, uint32 reg_hi);
+int stack_size( union reg_u *stack );
 void dump_stack( union reg_u *stack );
 
 #define d0 D0.b32
