@@ -133,7 +133,7 @@ char ScrollText[] =
 	"HELLO, AMIGA CODERS! THIS IS PHOTON PRESENTING THE "
 	"   // ASMSKOOL \x01" DEMO " FROM THE AMIGA HARDWARE "
 	"PROGRAMMING SERIES ON YOUTUBE. IT'S A SIMPLE "
-//	"DEMO WITH A        -BOUNC!NG-\x002\x0B4        SCROLLER, "
+	"DEMO WITH A        -BOUNC!NG-\x002\x0B4        SCROLLER, "
 	"MOVING RASTERBAR, BOB PARALLAX, AND SPRITE STARFIELD.        "
 	"GREETINGS TO        SCOOPEX MEMBERS AND ALL DEMOSCENE FRIENDS, "
 	"EAB FRIENDS, AND SPECIAL SHOUTS TO TONI, JENS, BIFAT, BONEFISH, "
@@ -660,7 +660,6 @@ void VBint()			//					;Blank template VERTB interrupt
 	}
 
 	Part1();					//	bsr.w Part1
-
 							//	IFD Measure
 #ifdef Measure
 							//	move.w #0x722,0x180(a6)
@@ -680,7 +679,7 @@ void VBint()			//					;Blank template VERTB interrupt
 							//	move.w d0,0x9c(a6)		;0xdff09c=INTREQ
 							//	move.w d0,0x9c(a6)
 							//.notvb:
-							//	movem.l (sp)+,d0-a6		;restore
+	movem_pop(RD0,RA6);		//	movem.l (sp)+,d0-a6		;restore
 							//	rte
 }
 	
@@ -693,7 +692,8 @@ extern int blitzenDebug ;
 #define plotY 70
 
 void PlotChar()										//PlotChar:	;a0=scrollptr
-{												//;	movem.l d0-a6,-(sp)
+{
+	//	movem_push(RD0,RA6);						//;	movem.l d0-a6,-(sp)
 	a0 = (uint32) ScrollPtr;							//	move.l ScrollPtr(PC),a0
 
 	a6 = (uint32) custom;							//	lea 0xdff000,a6
@@ -732,8 +732,6 @@ void PlotChar()										//PlotChar:	;a0=scrollptr
 		}
 	}											//.char:
 
-	printf("%c\n",d0);
-
 	ScrollPtr = (void *) a0;							//	move.l a0,ScrollPtr
 	LastChar =  d0;									//	move.b d0,LastChar
 	d0 -= 32;										//	sub.w #32,d0
@@ -766,7 +764,7 @@ void PlotChar()										//PlotChar:	;a0=scrollptr
 	_doBlitter( custom );	
 	blitzenDebug = 0;
 
-	movem_pop(RD0,RA6);							//;	movem.l (sp)+,d0-a6
+	//	movem_pop(RD0,RA6);							//;	movem.l (sp)+,d0-a6
 }												//	rts
 
 /*
