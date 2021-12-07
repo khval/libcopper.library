@@ -475,9 +475,11 @@ void Part1()
 
 //    *--- scroller ---*
 
-							//	move.w Cmd_StopCount(PC),d0
-	if ( Cmd_StopCount)			//	beq.s .normal
+	d0 = Cmd_StopCount;		//	move.w Cmd_StopCount(PC),d0
+	if ( d0 != 0 )				//	beq.s .normal
+	{
 		Cmd_StopCount--;		//	subq.w #1,Cmd_StopCount
+	}
 	else						//	bra.s .skipscroll
 	{						//.normal:
 		Scrollit();				//	bsr.w Scrollit
@@ -687,9 +689,6 @@ void VBint()			//					;Blank template VERTB interrupt
 #define col	4
 
 extern int blitzenDebug ;
-
-#undef plotY
-#define plotY 70
 
 void PlotChar()										//PlotChar:	;a0=scrollptr
 {
@@ -1219,23 +1218,25 @@ void 	BounceScroller()								//BounceScroller:
 	d1 = BounceYaccel;								//	move.w BounceYaccel(PC),d1
 	BounceYspeed+=d1;							//	add.w d1,BounceYspeed
 	d0 += BounceYspeed;							//	add.w BounceYspeed(PC),d0
-												//	bpl.s .nobounce
-	BounceYspeed = 32;							//	move.w #32,BounceYspeed
-	d0 = 0;										//	clr.w d0
-												//.nobounce:
 
-	if (Cmd_Bounce)								//	tst.b Cmd_Bounce
-	{											//	bne.s .bounce2
+	if (D0.s32 <= 0)								//	bpl.s .nobounce
+	{
+		BounceYspeed = 32;						//	move.w #32,BounceYspeed
+		d0 = 0;									//	clr.w d0
+	}											//.nobounce:
+
+	if ( ! Cmd_Bounce)								//	tst.b Cmd_Bounce
+	{											//	bne.s .bounce2		// not equal zero
 		d0 = 1*8;									//	moveq #1*8,d0
 	}											//.bounce2:
-	d0 = BounceY;									//	move.w d0,BounceY
+	BounceY = d0;									//	move.w d0,BounceY
 
 	d0 >>= 3;									//	lsr.w #3,d0
-
 	d0 *= 3*ScrBpl;								//	mulu #3*scrbpl,d0
 	a0 += d0;									//	add.l d0,a0
 
 	a1 = (uint32) ScrBplP;							//	lea ScrBplP,a1		;where to poke the bitplane pointer words.
+
 	for (d0 = FontBpls;d0;d0--)						//	moveq #FontBpls-1,d0
 	{											//.bpll2:	move.l a0,d1
 		d1 = a0;
@@ -2029,10 +2030,10 @@ ScrBplP= cop_ptr;
 //    ---  bottom plate start  ---
 
 	cop_w (0x07df,0xfffe);
-	cop_w (0x10a,-(skybwid+320/8));
-	cop_w (0x104,0x20);
 
-	cop_w (0x0192,0x0248);
+	cop_w (0x10a,-(skybwid+320/8));		// BPL2MOD		// negative modula.
+	cop_w (0x104,0x20);				// BPLCON2
+
 	cop_w (0x0194,0x0348);
 	cop_w (0x0196,0x0458);
 	cop_w (0x0198,0x0668);
