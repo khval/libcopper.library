@@ -20,7 +20,7 @@ uint32 copperl1;
 uint32 copperl2;
 uint32 bp0, bp1, bp2, bp3, bp4, bp5, bp6, bp7;
 
-uint16 bpl1mod=0,bpl2mod=0;
+int16 bpl1mod=0,bpl2mod=0;			// this can be negative or positive values,
 
 uint32 copper_debug_on = 0;
 
@@ -333,17 +333,21 @@ void 	update_routines( int planes )
 
 void cop_wait(union cop data)
 {
-//	DebugPrintF("wait Cop: %08x at beam_y %d\n",data.d32, beam_y.b0);
-
 	if (data.d32 == 0xFFFFFFFE)
 	{
 		if (beam_y.b32 >= 255)
 		{
-			ywait_beam = (286 - 255);
+			ywait_beam = (314 - 255);
 			xwait_beam = 0x7C ;
 
 			ywait_beam_enable = 0xFF;
 			xwait_beam_enable = 0x7F;
+
+/*			DebugPrintF("wait Cop: %08x at beam y: %d, wait y: %d\n",
+					data.d32, 
+					beam_y.b0,
+					ywait_beam);*/
+
 			return;
 		}
 	}
@@ -368,6 +372,11 @@ void cop_wait(union cop data)
 		ywait_beam_enable = data.d16.a >> 8;
 		xwait_beam_enable = data.d16.a >> 1 & 0x7F;
 	}
+/*
+	DebugPrintF("wait Cop: %08x at beam y: %d, wait y: %d\n",
+			data.d32, 
+			beam_y.b0,
+			ywait_beam);*/
 }
 
 void cop_skip(union cop data)
@@ -451,11 +460,11 @@ void cop_move(union cop data)
 		case BPL8PTL: setLow16(bp7,data.d16.b);	bp7ptr = (unsigned char *) bp7;	break;
 
 		case BPL1MOD:
-					bpl1mod = data.d16.b;
+					bpl1mod = (signed) data.d16.b;
 					break;
 
 		case BPL2MOD:
-					bpl2mod = data.d16.b;
+					bpl2mod = (signed) data.d16.b;
 					break;
 
 		case BPLCON0:
@@ -595,8 +604,6 @@ void cop_move_(uint16 reg, uint16 data)
 int to_draw_count = 0;
 int draw_count = 0;
 
-bool beam_y_is_visible = true;
-
 struct ffdpart *bInfo;
 
 extern enum beam_state beam_displyed;
@@ -676,14 +683,14 @@ void __render2()
 				if ((beam_displyed  == displayed_in_window) || (beam_displyed  == displayed_in_window))
 				{
 					domod();
-//					debug_domod();
+					debug_domod();
 				}
 				beam_x.b32 = 0;
 				beam_y.b32++;
 				draw_y = (beam_y.b32-display_y)*display_scale_y;
 
-/*
-				if (draw_y < 294)
+
+				if (copper_debug_on)
 				{
 					DebugPrintF("*** bream_y: %d, draw_y %d, color0: %08x draw_count %d\n"
 						, beam_y.low
@@ -692,10 +699,10 @@ void __render2()
 						, draw_count
 						);
 				}
-*/
+
 				draw_count = 0;
 
-				if ((draw_y<0) || (draw_y>480))
+				if ((draw_y<0) || (draw_y>580))
 				{
 					if (in_window_y(beam_y.b32))
 					{
