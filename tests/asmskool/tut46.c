@@ -500,7 +500,6 @@ void Part1()
 		}					//.nowrap:
 
 		ScrollCtr=d0;			//	move.w d0,ScrollCtr
-
 	}						//.skipscroll:
 
 
@@ -589,7 +588,6 @@ void Part1()
 										
 		st_w(a0+(6+4*1), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*1(a0)
 		st_w(a0+(6+4*2), ld_w(a2)); a2 += 2; 	//	move.w (a2)+,6+4*2(a0)
-
 		st_w(a0+(6+4*3), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*3(a0)
 		st_w(a0+(6+4*4), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*4(a0)
 		st_w(a0+(6+4*5), ld_w(a2)); a2 += 2;	//	move.w (a2)+,6+4*5(a0)
@@ -1921,11 +1919,11 @@ waitras6 = cop_ptr;
 
 ScrBplP= cop_ptr;
 
-	cop_w (0xe0,0);
+	cop_w (0xe0,0);	// plane0
 	cop_w (0xe2,0);
-	cop_w (0xe8,0);
+	cop_w (0xe8,0);	// plane2
 	cop_w (0xea,0);
-	cop_w (0xf0,0);
+	cop_w (0xf0,0);		// plane4
 	cop_w (0xf2,0);
 	cop_w (0x108,ScrBpl*FontBpls-320/8);
 	cop_w (0x92,0x38);
@@ -2034,12 +2032,13 @@ ScrBplP= cop_ptr;
 	cop_w (0x10a,-(skybwid+320/8));		// BPL2MOD		// negative modula.
 	cop_w (0x104,0x20);				// BPLCON2
 
+	cop_w (0x0192,0x0248);				// COLOR09
 	cop_w (0x0194,0x0348);
 	cop_w (0x0196,0x0458);
 	cop_w (0x0198,0x0668);
 	cop_w (0x019a,0x0778);
 	cop_w (0x019c,0x09aa);
-	cop_w (0x019e,0x0abb);
+	cop_w (0x019e,0x0abb);				//  COLOR15
 
 	cop_w (0x0807,0xfffe);
 	cop_w (0x180,0x236);
