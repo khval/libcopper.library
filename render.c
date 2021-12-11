@@ -18,7 +18,7 @@
 uint32 copperList[2000 + 0x1000];
 uint32 copperl1;
 uint32 copperl2;
-uint32 bp0, bp1, bp2, bp3, bp4, bp5, bp6, bp7;
+uint32 bp0=0, bp1=0, bp2=0, bp3=0, bp4=0, bp5=0, bp6=0, bp7=0;
 
 int16 bpl1mod=0,bpl2mod=0;			// this can be negative or positive values,
 
@@ -250,7 +250,6 @@ void update_display_offsets()
 		gfx_shift = 1;
 
 	}
-
 
 	switch (display_scale_x)
 	{
@@ -557,14 +556,14 @@ void domod()
 {
 	switch( planes )
 	{
-		case 8:	bp7ptr+=bpl2mod;
-		case 7:	bp6ptr+=bpl1mod;
-		case 6:	bp5ptr+=bpl2mod;
-		case 5:	bp4ptr+=bpl1mod;
-		case 4:	bp3ptr+=bpl2mod;
-		case 3:	bp2ptr+=bpl1mod;
-		case 2:	bp1ptr+=bpl2mod;
-		case 1:	bp0ptr+=bpl1mod;
+		case 8:	if (bp7 != bp7ptr) bp7ptr+=bpl2mod;
+		case 7:	if (bp6 != bp6ptr) bp6ptr+=bpl1mod;
+		case 6:	if (bp5 != bp5ptr) bp5ptr+=bpl2mod;
+		case 5:	if (bp4 != bp4ptr) bp4ptr+=bpl1mod;
+		case 4:	if (bp3 != bp3ptr) bp3ptr+=bpl2mod;
+		case 3:	if (bp2 != bp2ptr) bp2ptr+=bpl1mod;
+		case 2:	if (bp1 != bp1ptr) bp1ptr+=bpl2mod;
+		case 1:	if (bp0 != bp0ptr) bp0ptr+=bpl1mod;
 	}
 }
 

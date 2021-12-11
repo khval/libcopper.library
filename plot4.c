@@ -15,6 +15,7 @@ unsigned char *dest_ptr_image;
 unsigned int dest_bpr;
 
 #include "plot4.h"
+#include "beam.h"
 
 union dbPixel palette2[256];
 
@@ -67,8 +68,8 @@ void init_dual_playfield_index( int plains )
 	int b;
 	int i;
 	int v;
-	int playfield1_colors = (1 << (plains/2));
-//	int playfield1_colors = 8;
+//	int playfield1_colors = (1 << (plains/2));
+	int playfield1_colors = 8;
 
 	for (i=0;i<0x10;i++)
 	{

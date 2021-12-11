@@ -138,15 +138,7 @@ uint64 convert_none()
 
 void *planar_routines[]  =
 {
-	convert_none,
-	convert_1p,
-	convert_2p,
-	convert_3p,
-	convert_4p,
-	convert_5p,
-	convert_6p,
-	convert_7p,
-	convert_8p
+	convert_none,convert_1p,convert_2p,convert_3p,convert_4p,convert_5p,convert_6p,convert_7p,convert_8p
 };
 
 void move_none(int n) {};
@@ -161,15 +153,7 @@ void move_8p(int n) { bp0ptr += n; bp1ptr += n; bp2ptr += n; bp3ptr += n; bp4ptr
 
 void *move_routines[]  =
 {
-	move_none,
-	move_1p,
-	move_2p,
-	move_3p,
-	move_4p,
-	move_5p,
-	move_6p,
-	move_7p,
-	move_8p
+	move_none,move_1p,move_2p,move_3p,move_4p,move_5p,move_6p,move_7p,move_8p
 };
 
 
