@@ -15,8 +15,6 @@
 #include "common.h"
 #include "render.h"
 
-#include "blitzen.c"
-
 extern union reg_u *emu_stack_ptr;
 union reg_u emu_stack[10000];
 
@@ -54,6 +52,7 @@ struct Custom *custom = 0xDFF000;
 #define mini_dump(a,b)
 
 void _doBlitter( struct Custom *custom );
+
 
 /*
 void mini_dump(uint16 *ptr,int cnt)
@@ -686,8 +685,6 @@ void VBint()			//					;Blank template VERTB interrupt
 #define row	(288*3*20/8)
 #define col	4
 
-extern int blitzenDebug ;
-
 void PlotChar()										//PlotChar:	;a0=scrollptr
 {
 	//	movem_push(RD0,RA6);						//;	movem.l d0-a6,-(sp)
@@ -757,9 +754,7 @@ void PlotChar()										//PlotChar:	;a0=scrollptr
 	st_w(a6+BLTDMOD, ScrBpl-col );					//	move.w #ScrBpl-col,BLTDMOD(a6)
 	st_w(a6+BLTSIZE, 20*3*64+2);					//	move.w #20*3*64+2,BLTSIZE(a6)
 
-	blitzenDebug = 0;
 	_doBlitter( custom );	
-	blitzenDebug = 0;
 
 	//	movem_pop(RD0,RA6);							//;	movem.l (sp)+,d0-a6
 }												//	rts
@@ -2455,8 +2450,6 @@ bool validAddress(uint8 *ptr)
 
 #if 1
 
-extern struct blitstate *bstate;
-
 void _doBlitter( struct Custom *custom )
 {
 	uint16 *dptr = (uint16 *) custom -> bltdpt;
@@ -2467,8 +2460,7 @@ void _doBlitter( struct Custom *custom )
 		return;
 	}
 
-	CustomToBlitsate( custom,  bstate );
-	blitzenBlit(  bstate );
+	doBlitter( custom );
 }
 
 #endif

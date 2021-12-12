@@ -107,6 +107,8 @@ void init_dual_playfield_index2()
 #define dualPalette(color) palette2[ dual_playfield_index2[color] ].argb1
 #define dualPalette2(color) palette2[ dual_playfield_index2[color] ].data;
 
+extern union ubeam beam_y;
+
 uint64 *plot4_playfield_scale1( char *source_data, uint32 *dest_data )
 {
 	*dest_data++ = dualPalette( *source_data ++ );		// pixel 0
@@ -115,6 +117,8 @@ uint64 *plot4_playfield_scale1( char *source_data, uint32 *dest_data )
 	*dest_data++ = dualPalette( *source_data ++ );		// pixel 3
 	return (uint64 *) dest_data;
 }
+
+extern unsigned char *bp0ptr,*bp1ptr,*bp2ptr,*bp3ptr,*bp4ptr,*bp5ptr,*bp6ptr,*bp7ptr;
 
 uint64 *plot4_playfield_scale2( char *source_data , uint64 *dest_data )
 {

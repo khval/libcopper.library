@@ -442,7 +442,7 @@ void cop_move(union cop data)
 		case COLOR15: setPalette(15,ecs2argb[data.d16.b].argb);	 break;
 
 		case BPL1PTH:	setHigh16(bp0,data.d16.b);	bp0ptr = (unsigned char *) bp0;	break;
-		case BPL1PTL: 	setLow16(bp0,data.d16.b);	bp0ptr = (unsigned char *) bp0; 	break;
+		case BPL1PTL: 	setLow16(bp0,data.d16.b);	bp0ptr = (unsigned char *) bp0;  	break;
 		case BPL2PTH: setHigh16(bp1,data.d16.b);	bp1ptr = (unsigned char *) bp1;	break;
 		case BPL2PTL: setLow16(bp1,data.d16.b);	bp1ptr = (unsigned char *) bp1;	break;
 		case BPL3PTH: setHigh16(bp2,data.d16.b);	bp2ptr = (unsigned char *) bp2;	break;
