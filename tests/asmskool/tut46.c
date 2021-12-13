@@ -10,6 +10,7 @@
 #include <proto/intuition.h>
 #include <proto/graphics.h>
 #include <proto/libblitter.h>
+#include <proto/ptreplay.h>
 #include <hardware/custom.h>
 
 #include "common.h"
@@ -185,7 +186,7 @@ uint16 *waitras4 = NULL;
 uint16 *waitras5 = NULL;
 uint16 *waitras6 = NULL;
 uint16 *ScrBplP = NULL;
-uint8 *Module1 = NULL;
+struct Module *Module1 = NULL;
 
 uint32 w	=352;
 uint32 h	=256;
@@ -278,21 +279,17 @@ void Demo()
 //    ---  Call P61_Init  ---
 	movem_push(RD0,RA6);				//	movem.l d0-a6,-(sp)
 
-	a0 = (uint32) Module1;				 //	lea Module1,a0
-	a1 = 0;			// sub.l a1,a1
-	a2 = 0;			// sub.l a2,a2
-	d0 = 0;			// moveq #0,d0
 
-#ifdef have_protracker
-	P61_Init();
-#endif
+
+	if (Module1) PTPlay(Module1);
+
 	movem_pop(RD0,RA6);				//	movem.l (sp)+,d0-a6
 	Main();
 	movem_push(RD0,RA6);				//	movem.l d0-a6,-(sp)
 
-#ifdef have_protracker
-	P61_End();
-#endif
+
+	if (Module1) PTStop(Module1);
+
 
 	movem_pop(RD0,RA6);				//	movem.l (sp)+,d0-a6
 
@@ -2151,6 +2148,8 @@ ScrBplP= cop_ptr;
 
 bool load_raw_files()
 {
+	const char Module1Name[]="mod.new_ditty.mod";
+
 	uint32 screenSize = bplsize*FontBpls;
 
 	if( ! load_raw("media/FastCarFont.284x100x3",0,(void **) &Font,(void **) &FontE)) return false;
@@ -2160,7 +2159,13 @@ bool load_raw_files()
 	if( ! load_raw("media/Cloud.112x38x3.masks.raw",0, (void **) &CloudMask, (void **) &CloudMaskE)) return false;
 	if( ! load_raw("media/Cloud.64x24x3.masks.raw", 0, (void **) &Cloud2Mask, (void **) &Cloud2MaskE)) return false;
 	if( ! load_raw("media/Cloud.48x15x3.masks.raw", 0, (void **) &Cloud3Mask, (void **) &Cloud3MaskE)) return false;
-//	if( ! load_raw("P61.new_ditty", 0, (void **) &Module1, (void **) &Module1E)) return false; // usecode 0xc00b43b
+
+	Module1 = PTLoadModule(Module1Name);
+
+	if (! Module1 )
+	{
+		printf("Failed to load module %s\n",Module1Name);
+	}
 
 	if( ! load_raw("sky3centered.raw", (logobwid*6) + screenSize, (void **) &Logo, (void **) &LogoE)) return false;
 
@@ -2182,6 +2187,9 @@ bool load_raw_files()
 
 void uload_files()
 {
+	if (Module1) PTUnloadModule( Module1 );
+	Module1 = NULL;
+
 	smart_free( Font );
 	smart_free( Cloud );
 	smart_free( Cloud2 );
@@ -2189,7 +2197,6 @@ void uload_files()
 	smart_free( CloudMask );
 	smart_free( Cloud2Mask );
 	smart_free( Cloud3Mask );
-	smart_free( Module1 );
 	smart_free( Logo );
 }
 
@@ -2448,10 +2455,9 @@ bool validAddress(uint8 *ptr)
 }
 
 
-#if 1
-
 void _doBlitter( struct Custom *custom )
 {
+/*
 	uint16 *dptr = (uint16 *) custom -> bltdpt;
 
 	if (validAddress( (uint8 *) dptr) == false)
@@ -2459,136 +2465,11 @@ void _doBlitter( struct Custom *custom )
 		printf("not a valied address: %08x\n", dptr);
 		return;
 	}
-
+*/
 	doBlitter( custom );
 }
 
-#endif
 
 
-#if 0
 
-char *_b[]=
-{
-	"0000 0000",
-	"0000 0001",
-	"0000 0010",
-	"0000 0011",
-
-	"0000 0100",
-	"0000 0101",
-	"0000 0110",
-	"0000 0111",
-
-	"0000 1000",
-	"0000 1001",
-	"0000 1010",
-	"0000 1011",
-
-	"0000 1100",
-	"0000 1101",
-	"0000 1110",
-	"0000 1111",
-};
-
-void _doBlitter( struct Custom *custom )	// activate blitter...
-{
-	uint16 ash_last;
-	uint16 ash_next;
-	uint16 ash;
-	uint16 ash_mask;
-	uint16 bsh_last;
-	uint16 bsh_next;
-	uint16 bsh;
-	uint16 bsh_mask;
-	uint16 used;
-	uint16 func;
-
-	uint32 x,y;
-	uint32 w,h;
-
-	uint16 *arow;
-	uint16 *drow;
-
-	uint16 *aptr = (uint16 *) custom -> bltapt;
-	uint16 *bptr = (uint16 *) custom -> bltbpt;
-	uint16 *cptr = (uint16 *) custom -> bltcpt;
-	uint16 *dptr = (uint16 *) custom -> bltdpt;
-
-	if (validAddress(dptr) == false)
-	{
-		printf("not a valied address\n");
-		return;
-	}
-	
-	h = custom -> bltsize >> 6;
-	w = custom -> bltsize & 0x3F;
-
-	ash = custom -> bltcon0 & 0xF000 >> (3*4);
-	used = custom -> bltcon0 & 0x0F00 >> (2*4);
-	func = custom -> bltcon0 & 0xFF;
-
-	bsh = custom -> bltcon1 & 0xF000 >> (3*4);	
-
-	ash_mask = ash ? (1 << ash) -1 : 0;
-	bsh_mask = bsh ? (1 << bsh) -1 : 0;
-
-	printf("used: %s\n",_b[used]);
-	printf("ash %d, bsh %d\n",ash,bsh);
-	printf("ash_mask %08x, bsh_mask %08x\n",ash_mask,bsh_mask);
-	printf("func: %08x\n",func);
-
-
-	if (used == 0) getchar();
-
-//	printf("bltcon0 %04x\n", custom -> bltcon0);
-//	printf("bltcon1 %04x\n", custom -> bltcon1);
-
-/*
-	printf("bltafwm %08x -- %08x\n", 
-			custom -> bltafwm, offsetof(struct Custom,bltafwm));
-
-	printf("bltalwm %08x -- %08x\n", 
-			custom -> bltalwm, offsetof(struct Custom,bltalwm));
-*/
-
-	printf("w %d, h %d\n", w,h );
-
-	printf("bltamod %d\n", custom -> bltamod);
-	printf("bltbmod %d\n", custom -> bltbmod);
-	printf("bltcmod %d\n", custom -> bltcmod);
-	printf("bltdmod %d\n", custom -> bltdmod);
-
-
-	for (y=0;y<h;y++)
-	{
-		ash_last = 0;
-		bsh_last = 0;
-
-		for (x=0;x<w;x++)
-		{
-			ash_next = *aptr & ash_mask << (16 - ash);
-			*dptr = *cptr | (ash_last | (*aptr >> ash)) ;
-			ash_last = ash_next;
-			aptr++; bptr++; cptr++; dptr++;
-		}
-
-		aptr += custom -> bltamod/2;
-		bptr += custom -> bltbmod/2;
-		cptr += custom -> bltcmod/2;
-		dptr += custom -> bltdmod/2;
-	}
-
-/*
-	st_l(a6+BLTCON0, 0x49f00002);					//	move.l #0x49f00002,BLTCON0(a6)
-	st_l(a6+BLTAFWM, 0xFFFFFFFF);					//	move.l #0xffffffff,BLTAFWM(a6)
-	st_l(a6+BLTAPTH, Screen+bltoffs+brcorner);			//	move.l #Screen+bltoffs+brcorner,BLTAPTH(a6)
-	st_l(a6+BLTDPTH, Screen+bltoffs+brcorner);			//	move.l #Screen+bltoffs+brcorner,BLTDPTH(a6)
-	st_w(a6+BLTAMOD, bltskip);						//	move.w #bltskip,BLTAMOD(a6)
-	st_w(a6+BLTDMOD, bltskip);						//	move.w #bltskip,BLTDMOD(a6)
-	st_w(a6+BLTSIZE, blth*3*64+bltw);					//	move.w #blth*3*64+bltw,BLTSIZE(a6)
-*/
-}
-	
-#endif
 

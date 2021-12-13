@@ -1,0 +1,21 @@
+
+Dependencies needed to compile this project
+
+Download:
+
+http://os4depot.net/index.php?function=comments&file=library/audio/ptreplay_lib.lha
+
+Then copy the includes files into SDK:Include/include_h/
+using DirectoryOpus or the tool you like.
+
+Download:
+
+https://github.com/khval/Libblitter.library
+
+Compile and install.
+
+make clean
+make all
+installl
+
+And now your ready to build this project.
