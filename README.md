@@ -27,3 +27,22 @@ because old Amiga chipset is so different from what is use today in modern compu
 
 and because operates its on a bit per bit bases, it’s not wherry GPU/shader friendly, 
 but if some knows how to convert it into shader it can have huge impact on Amiga Emulation.
+
+Compiling this project.
+---
+
+Compiling this project.
+You need dependencies in depencies.txt file, 
+read and follow the instruction in this file first.
+
+Next you should do 
+make clean
+and
+make all.
+
+If like you can modify makefiles, and add your own projects to it, 
+that might easiest way to get started with it.
+
+
+
+
