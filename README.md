@@ -9,13 +9,13 @@ This library was made for AmigaOS4.1 and will need some changes to work on anyth
 About the copper.
 ---
 
-Copper is display of Amiga, its responsible controlling pixel clock, it draws the images, 
+Copper display the graphics of Amiga, its responsible for controlling the pixel clock, it draws the images, 
 and color and sprites, the Copper is part of what is called AGA/OCS or ECS, chipset.
 
 The copper is simple coprocessor, it has few instructions like MOVE, WAIT and SKIP.
 
 the MOVE is used change hardware registers (values in the graphic chip), WAIT can wait beam positions, 
-and SKIP allows you repeat part of the copper list, until a beam position is has been reached.
+and SKIP allows you repeat part of the copper list, until a beam position is reached.
 
 the copper list can’t be executed all at once, it has to be interpreted as the beam is drawing the screen.
 
@@ -26,4 +26,4 @@ The Amiga chipset can produce unique effects, and was revolutionary at its time 
 because old Amiga chipset is so different from what is use today in modern computers, its whery CPU intensive to emulate. 
 
 and because operates its on a bit per bit bases, it’s not wherry GPU/shader friendly, 
-but if some knows how to convert into shader it can have huge impact on Amiga Emulation.
+but if some knows how to convert it into shader it can have huge impact on Amiga Emulation.
