@@ -11,22 +11,7 @@
 #include <proto/layers.h>
 
 #include "render.h"
-
-
-struct XYSTW_Vertex3D { 
-	float x, y; 
-	float s, t, w; 
-}; 
-
-typedef struct CompositeHookData_s {
-	struct BitMap *sourceBitMap; // The source bitmap
-	int32 sourceX,sourceY;
-	int32 sourceWidth, sourceHeight; // The source dimensions
-	int32 offsetX, offsetY; // The offsets to the destination area relative to the window's origin
-	int32 destWidth, destHeight;
-	int32 scaleX, scaleY; // The scale factors
-	uint32 retCode; // The return code from CompositeTags()
-} CompositeHookData;
+#include "common.h"
 
 
 bool checkMouse(struct Window *win, ULONG bcode)
@@ -78,7 +63,7 @@ void WaitLeftMouse(struct Window *win)
 	else printf("no user port for wait left mouse\n");
 }
 
-static ULONG compositeHookFunc(
+ULONG compositeHookFunc(
 			struct Hook *hook, 
 			struct RastPort *rastPort, 
 			struct BackFillMessage *msg)

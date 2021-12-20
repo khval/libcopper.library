@@ -68,3 +68,17 @@ void dump_stack( union reg_u *stack );
 #define a6 A6.b32
 #define a7 A7.b32
 
+struct XYSTW_Vertex3D { 
+	float x, y; 
+	float s, t, w; 
+}; 
+
+typedef struct CompositeHookData_s {
+	struct BitMap *srcBitMap; // The source bitmap
+	int32 srcWidth, srcHeight; // The source dimensions
+	int32 offsetX, offsetY; // The offsets to the destination area relative to the window's origin
+	int32 scaleX, scaleY; // The scale factors
+	uint32 retCode; // The return code from CompositeTags()
+} CompositeHookData;
+
+

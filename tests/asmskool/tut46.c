@@ -11,6 +11,8 @@
 #include <proto/graphics.h>
 #include <proto/libblitter.h>
 #include <proto/ptreplay.h>
+#include <proto/layers.h>
+#include <intuition/intuition.h>
 #include <hardware/custom.h>
 
 #include "common.h"
@@ -25,8 +27,6 @@ struct Custom *custom = &_custom;	// store locally... handle things with do_func
 #else
 struct Custom *custom = 0xDFF000;
 #endif
-
-
 
 #define COPDEBUGON	0xFFB0
 #define COPDEBUGOFF	0xFFC0
@@ -54,6 +54,7 @@ struct Custom *custom = 0xDFF000;
 
 void _doBlitter( struct Custom *custom );
 
+void comp_window_update_new( struct BitMap *bitmap, struct Window *win);
 
 /*
 void mini_dump(uint16 *ptr,int cnt)
@@ -119,6 +120,8 @@ uint8		Cmd_Bounce=0;							//Cmd_Bounce:
 uint16	Cmd_StopCount=0;							//Cmd_StopCount:
 												//	dc.w 0
 #define DEMO "TUT46.c"
+
+#define demo_name "Scoopex  tutorial 46, demo sky "
 
 uint32 NullSpr[] = {
 	 0x2a20,0x2b00
@@ -2133,8 +2136,6 @@ ScrBplP= cop_ptr;
 	cop_w (0xffff,0xfffe);
 
 	CopperE = cop_ptr;
-
-	printf("copper size is: %d\n", CopperE - Copper);
 }
 
 //********** PLAYROUTINE CODE **********
@@ -2171,14 +2172,8 @@ bool load_raw_files()
 
 	LogoE -= screenSize;
 
-	printf("Logo: %08x to %08x\n", Logo,LogoE);
-
 	Screen = LogoE;
 	ScreenE = Screen + screenSize;
-
-	printf("Screen: %08x to %08x\n", Screen,ScreenE);
-
-//	getchar();
 
 	return true;
 }
@@ -2206,7 +2201,6 @@ void uload_files()
 void bss_c()
 {
 	int size;
-	printf("size of screen: %d\n",bplsize*FontBpls);
 
 	size = skybwid * (220+1);
 
@@ -2215,7 +2209,6 @@ void bss_c()
 
 	Sky2 = malloc( size );
 	Sky2E = Sky2 + size; 
-
 }
 
 /*
@@ -2330,12 +2323,15 @@ void	cleanup()
 	close_libs();
 }
 
+#define inner_win_w (640 + 64)
+#define inner_win_h (512 + 64)
 
 int main()
 {
 	if (open_libs() == false)
 	{
 		close_libs();
+		return;
 	}
 
 	if (load_raw_files() == false)
@@ -2349,12 +2345,25 @@ int main()
 		WA_IDCMP,IDCMP_MOUSEBUTTONS,
 		WA_Left,320,
 		WA_Top,20,
-		WA_Width, 640 + 128,
-		WA_Height, 480 + 128,
+		WA_InnerWidth, inner_win_w,
+		WA_InnerHeight, inner_win_h,
+
+		WA_MinWidth,	100,
+	 	WA_MinHeight,	100,	
+		WA_MaxWidth,	~0,
+	 	WA_MaxHeight, ~0,	
+
+		WA_DragBar, true,
+		WA_DepthGadget, true,
+		WA_SizeGadget, TRUE,
+		WA_SizeBBottom, TRUE,
+		WA_CloseGadget, FALSE,
+		WA_Title, (ULONG) demo_name,
 		TAG_END);
 
 	if (!win)
 	{
+		printf("window failed to open\n");
 		cleanup();
 		return 0;
 	}
@@ -2372,6 +2381,7 @@ int main()
 	}
 	else
 	{
+		printf("failed to open bitmap\n");
 		cleanup();
 		return 0;
 	}
@@ -2387,13 +2397,14 @@ int main()
 	init_copper();
 
 	Demo();
-
 	cleanup();
-
 }
 
 
 // if not mistaken on vblank interrupt, stuff should happen, so this were stuff happens...
+
+#define InnerWidth(win) (win -> Width - win -> BorderLeft - win -> BorderRight)
+#define InnerHeight(win) (win -> Height - win -> BorderTop - win -> BorderBottom)
 
 void WaitMouse()
 {
@@ -2408,14 +2419,16 @@ void WaitMouse()
 			WaitTOF();
 			VBint();		// trigger interupt...
 			render_copper( custom, (uint32 *) Copper,  copperBitmap );
-			BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, 0,0, win -> Width, win -> Height, 0xC0 );
+
+//			BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, win -> BorderLeft,win -> BorderTop, InnerWidth(win), InnerHeight(win), 0xC0 );
+//			BltBitMapRastPort(  copperBitmap, 0,0, win -> RPort, win -> BorderLeft,win -> BorderTop, inner_win_w, inner_win_h, 0xC0 );
+
+			BackFill_Func(NULL, NULL);
 
 			sig = SetSignal( 0L, win_mask | SIGBREAKF_CTRL_C );
 			if (sig & win_mask) if (checkMouse(win, 1)) running = false;
 		} while (running);
 	}
-
-//	dump_copper( (uint32 *) Copper );
 }
 
 void WAITBLIT()
@@ -2470,6 +2483,97 @@ void _doBlitter( struct Custom *custom )
 }
 
 
+struct BackFillArgs
+{
+	int parm;
+	int value;
+};
+
+static struct Hook hook;
+static struct Rectangle rect;
+static CompositeHookData hookData;
+
+void BackFill_Func(struct RastPort *ArgRP, struct BackFillArgs *MyArgs);
+
+struct Hook BackFill_Hook =
+{
+	{NULL, NULL},
+	(HOOKFUNC) &BackFill_Func,
+	NULL,
+	NULL
+};
+
+void set_target_hookData( struct BitMap *bitmap, struct Window *win );
+
+// void comp_window_update_new( struct BitMap *bitmap, struct Window *win)
 
 
+void BackFill_Func(struct RastPort *ArgRP, struct BackFillArgs *MyArgs)
+{
+	if (win)
+	{
+		set_target_hookData(copperBitmap,win);
+
+		register struct RastPort *RPort = win->RPort;
+
+		LockLayer(0, win -> RPort->Layer);
+		DoHookClipRects(&hook, win -> RPort, &rect);
+		UnlockLayer( win -> RPort->Layer);
+	}
+}
+
+static ULONG _compositeHookFunc(
+			struct Hook *hook, 
+			struct RastPort *rastPort, 
+			struct BackFillMessage *msg)
+ {
+
+	CompositeHookData *hookData = (CompositeHookData*)hook->h_Data;
+
+	hookData->retCode = CompositeTags(
+		COMPOSITE_Src, 
+			hookData->srcBitMap, 
+			rastPort->BitMap,
+		COMPTAG_SrcWidth,   hookData->srcWidth,
+		COMPTAG_SrcHeight,  hookData->srcHeight,
+		COMPTAG_ScaleX, 	hookData->scaleX,
+		COMPTAG_ScaleY, 	hookData->scaleY,
+		COMPTAG_OffsetX,    msg->Bounds.MinX - (msg->OffsetX - hookData->offsetX),
+		COMPTAG_OffsetY,    msg->Bounds.MinY - (msg->OffsetY - hookData->offsetY),
+		COMPTAG_DestX,      msg->Bounds.MinX,
+		COMPTAG_DestY,      msg->Bounds.MinY,
+		COMPTAG_DestWidth,  msg->Bounds.MaxX - msg->Bounds.MinX + 1,
+		COMPTAG_DestHeight, msg->Bounds.MaxY - msg->Bounds.MinY + 1,
+		COMPTAG_Flags,      COMPFLAG_SrcFilter | COMPFLAG_IgnoreDestAlpha | COMPFLAG_HardwareOnly,
+		TAG_END);
+
+	return 0;
+}
+
+
+void set_target_hookData( struct BitMap *bitmap, struct Window *win )
+{
+ 	rect.MinX = win->BorderLeft;
+ 	rect.MinY = win->BorderTop;
+ 	rect.MaxX = win->Width - win->BorderRight - 1;
+ 	rect.MaxY = win->Height - win->BorderBottom - 1;
+
+ 	float destWidth = rect.MaxX - rect.MinX + 1;
+ 	float destHeight = rect.MaxY - rect.MinY + 1;
+ 	float scaleX = (destWidth + 0.5f) / inner_win_w;
+ 	float scaleY = (destHeight + 0.5f) / inner_win_h;
+
+	hookData.srcBitMap = copperBitmap;
+	hookData.srcWidth = inner_win_w;
+	hookData.srcHeight = inner_win_h;
+	hookData.offsetX = win->BorderLeft;
+	hookData.offsetY = win->BorderTop;
+	hookData.scaleX = COMP_FLOAT_TO_FIX(scaleX);
+	hookData.scaleY = COMP_FLOAT_TO_FIX(scaleY);
+	hookData.retCode = COMPERR_Success;
+
+	hook.h_Entry = (HOOKFUNC) _compositeHookFunc;
+	hook.h_Data = &hookData;
+
+}
 

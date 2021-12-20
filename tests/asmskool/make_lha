@@ -1,0 +1,30 @@
+.key target_lha
+.bra {
+.ket }
+
+setenv lhafile=ram:scoopex_demo_sky.lha
+
+if exists ram:scoopex_demo_sky
+	delete ram:scoopex_demo_sky all
+endif
+
+if exists ram:scoopex_demo_sky.lha
+	delete ram:scoopex_demo_sky.lha
+endif
+
+makedir ram:scoopex_demo_sky
+makedir ram:scoopex_demo_sky/media
+makedir ram:scoopex_demo_sky/libs
+
+copy package ram:scoopex_demo_sky all
+copy media/#? ram:scoopex_demo_sky/media all
+copy tut46.elf ram:scoopex_demo_sky
+copy mod.new_ditty.mod ram:scoopex_demo_sky
+copy sky3centered.raw ram:scoopex_demo_sky
+copy libs:libblitter.library ram:scoopex_demo_sky/libs
+copy libs:ptreplay.library ram:scoopex_demo_sky/libs
+copy libs:ptplay.library ram:scoopex_demo_sky/libs
+
+lha -er a $lhafile ram:scoopex_demo_sky
+;delete ram:scoopex_demo_sky all 
+
